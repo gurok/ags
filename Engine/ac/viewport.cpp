@@ -18,11 +18,11 @@
 #include "ac/characterinfo.h"
 #include "ac/gamestate.h"
 #include "ac/gamesetup.h"
+#include "main/graphics_mode.h"
 
 extern int offsetx, offsety;
 extern GameState play;
 extern roomstruct thisroom;
-extern int scrnwid,scrnhit;
 extern GameSetup usetup;
 extern CharacterInfo*playerchar;
 
@@ -33,19 +33,19 @@ void check_viewport_coords()
 
     int roomWidth = multiply_up_coordinate(thisroom.width);
     int roomHeight = multiply_up_coordinate(thisroom.height);
-    if (offsetx + scrnwid > roomWidth)
-        offsetx = roomWidth - scrnwid;
-    if (offsety + scrnhit > roomHeight)
-        offsety = roomHeight - scrnhit;
+    if (offsetx + GameSize.Width > roomWidth)
+        offsetx = roomWidth - GameSize.Width;
+    if (offsety + GameSize.Height > roomHeight)
+        offsety = roomHeight - GameSize.Height;
 }
 
 
 void update_viewport()
 {
-    if ((thisroom.width > BASEWIDTH) || (thisroom.height > BASEHEIGHT)) {
+    if ((thisroom.width > usetup.base_width) || (thisroom.height > usetup.base_height)) {
         if (play.offsets_locked == 0) {
-            offsetx = multiply_up_coordinate(playerchar->x) - scrnwid/2;
-            offsety = multiply_up_coordinate(playerchar->y) - scrnhit/2;
+            offsetx = multiply_up_coordinate(playerchar->x) - GameSize.Width/2;
+            offsety = multiply_up_coordinate(playerchar->y) - GameSize.Height/2;
         }
         check_viewport_coords();
     }

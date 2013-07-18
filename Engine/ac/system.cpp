@@ -23,6 +23,7 @@
 #include "ac/system.h"
 #include "ac/dynobj/scriptsystem.h"
 #include "debug/debug_log.h"
+#include "main/graphics_mode.h"
 #include "main/main.h"
 #include "media/audio/soundclip.h"
 #include "gfx/graphicsdriver.h"
@@ -32,15 +33,13 @@ extern GameSetup usetup;
 extern GameState play;
 extern SOUNDCLIP *channels[MAX_SOUND_CHANNELS+1];
 extern ScriptAudioChannel scrAudioChannel[MAX_SOUND_CHANNELS + 1];
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
 extern ScriptSystem scsystem;
-extern int scrnwid,scrnhit;
 extern IGraphicsDriver *gfxDriver;
 extern CCAudioChannel ccDynamicAudio;
 
 
 int System_GetColorDepth() {
-    return final_col_dep;
+    return GameResolution.ColorDepth;
 }
 
 int System_GetOS() {
@@ -48,19 +47,19 @@ int System_GetOS() {
 }
 
 int System_GetScreenWidth() {
-    return final_scrn_wid;
+    return GameResolution.Width;
 }
 
 int System_GetScreenHeight() {
-    return final_scrn_hit;
+    return GameResolution.Height;
 }
 
 int System_GetViewportHeight() {
-    return divide_down_coordinate(scrnhit);
+    return divide_down_coordinate(GameSize.Height);
 }
 
 int System_GetViewportWidth() {
-    return divide_down_coordinate(scrnwid);
+    return divide_down_coordinate(GameSize.Width);
 }
 
 const char *System_GetVersion() {

@@ -20,6 +20,7 @@
 #include "ac/global_game.h"
 #include "ac/global_screen.h"
 #include "ac/screen.h"
+#include "main/graphics_mode.h"
 #include "platform/base/agsplatformdriver.h"
 #include "plugin/agsplugin.h"
 #include "gfx/bitmap.h"
@@ -33,7 +34,6 @@ extern GameState play;
 extern IGraphicsDriver *gfxDriver;
 extern AGSPlatformDriver *platform;
 extern Bitmap *virtual_screen;
-extern int scrnwid,scrnhit;
 
 void my_fade_in(PALLETE p, int speed) {
     if (game.color_depth > 1) {
@@ -92,17 +92,17 @@ IDriverDependantBitmap* prepare_screen_for_transition_in()
         quit("Crossfade: buffer is null attempting transition");
 
     temp_virtual = gfxDriver->ConvertBitmapToSupportedColourDepth(temp_virtual);
-    if (temp_virtual->GetHeight() < scrnhit)
+    if (temp_virtual->GetHeight() < GameSize.Height)
     {
-        Bitmap *enlargedBuffer = BitmapHelper::CreateBitmap(temp_virtual->GetWidth(), scrnhit, temp_virtual->GetColorDepth());
-        enlargedBuffer->Blit(temp_virtual, 0, 0, 0, (scrnhit - temp_virtual->GetHeight()) / 2, temp_virtual->GetWidth(), temp_virtual->GetHeight());
+        Bitmap *enlargedBuffer = BitmapHelper::CreateBitmap(temp_virtual->GetWidth(), GameSize.Height, temp_virtual->GetColorDepth());
+        enlargedBuffer->Blit(temp_virtual, 0, 0, 0, (GameSize.Height - temp_virtual->GetHeight()) / 2, temp_virtual->GetWidth(), temp_virtual->GetHeight());
         delete temp_virtual;
         temp_virtual = enlargedBuffer;
     }
-    else if (temp_virtual->GetHeight() > scrnhit)
+    else if (temp_virtual->GetHeight() > GameSize.Height)
     {
-        Bitmap *clippedBuffer = BitmapHelper::CreateBitmap(temp_virtual->GetWidth(), scrnhit, temp_virtual->GetColorDepth());
-        clippedBuffer->Blit(temp_virtual, 0, (temp_virtual->GetHeight() - scrnhit) / 2, 0, 0, temp_virtual->GetWidth(), temp_virtual->GetHeight());
+        Bitmap *clippedBuffer = BitmapHelper::CreateBitmap(temp_virtual->GetWidth(), GameSize.Height, temp_virtual->GetColorDepth());
+        clippedBuffer->Blit(temp_virtual, 0, (temp_virtual->GetHeight() - GameSize.Height) / 2, 0, 0, temp_virtual->GetWidth(), temp_virtual->GetHeight());
         delete temp_virtual;
         temp_virtual = clippedBuffer;
     }

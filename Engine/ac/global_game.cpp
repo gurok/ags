@@ -47,6 +47,7 @@
 #include "main/engine.h"
 #include "main/game_start.h"
 #include "main/game_run.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "script/script.h"
 #include "script/script_runtime.h"
@@ -84,7 +85,6 @@ extern int getloctype_index;
 extern int offsetx, offsety;
 extern char saveGameDirectory[260];
 extern IGraphicsDriver *gfxDriver;
-extern int scrnwid,scrnhit;
 extern color palette[256];
 extern Bitmap *virtual_screen;
 
@@ -734,7 +734,7 @@ int SaveScreenShot(const char*namm) {
 
     if (gfxDriver->RequiresFullRedrawEachFrame()) 
     {
-        Bitmap *buffer = BitmapHelper::CreateBitmap(scrnwid, scrnhit, 32);
+        Bitmap *buffer = BitmapHelper::CreateBitmap(GameSize.Width, GameSize.Height, 32);
         gfxDriver->GetCopyOfScreenIntoBitmap(buffer);
 
 		if (!buffer->SaveToFile(fileName, palette)!=0)

@@ -30,6 +30,7 @@
 #include "ac/string.h"
 #include "ac/spritecache.h"
 #include "gfx/bitmap.h"
+#include "main/graphics_mode.h"
 
 using AGS::Common::Bitmap;
 
@@ -44,9 +45,21 @@ extern void ensure_text_valid_for_font(char *, int);
 extern SpriteCache spriteset; // in ac_runningame
 extern GameSetupStruct game;
 
-//=============================================================================
-// Engine-specific implementation split out of acgui.h
-//=============================================================================
+bool GUIMain::is_alpha() 
+{
+  if (this->bgpic > 0)
+  {
+    // alpha state depends on background image
+    return is_sprite_alpha(this->bgpic);
+  }
+  if (this->bgcol > 0)
+  {
+    // not alpha transparent if there is a background color
+    return false;
+  }
+  // transparent background, enable alpha blending
+  return (GameResolution.ColorDepth >= 24);
+}
 
 int GUIObject::IsClickable()
 {
@@ -57,10 +70,6 @@ void check_font(int *fontnum)
 {
     // do nothing
 }
-
-//=============================================================================
-// Engine-specific implementation split out of acgui.cpp
-//=============================================================================
 
 int get_adjusted_spritewidth(int spr)
 {

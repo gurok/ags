@@ -27,6 +27,7 @@
 #include "ac/roomstruct.h"
 #include "ac/screen.h"
 #include "script/cc_error.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "media/audio/soundclip.h"
 #include "platform/base/agsplatformdriver.h"
@@ -49,7 +50,6 @@ extern AGSPlatformDriver *platform;
 extern Bitmap *temp_virtual;
 extern Bitmap *virtual_screen;
 extern volatile int timerloop;
-extern int scrnwid,scrnhit;
 extern color old_palette[256];
 
 int in_enters_screen=0,done_es_error = 0;
@@ -281,7 +281,7 @@ void process_event(EventHappened*evp) {
                     timerloop = 0;
                     boxwid += get_fixed_pixel_size(16);
                     boxhit += multiply_up_coordinate(GetMaxScreenHeight() / 20);
-                    int lxp = scrnwid / 2 - boxwid / 2, lyp = scrnhit / 2 - boxhit / 2;
+                    int lxp = GameSize.Width / 2 - boxwid / 2, lyp = GameSize.Height / 2 - boxhit / 2;
                     gfxDriver->Vsync();
                     screen_bmp->Blit(virtual_screen, lxp, lyp, lxp, lyp,
                         boxwid, boxhit);
@@ -344,8 +344,8 @@ void process_event(EventHappened*evp) {
                 }
                 // do the dissolving
                 int maskCol = temp_virtual->GetMaskColor();
-                for (bb=0;bb<scrnwid;bb+=4) {
-                    for (cc=0;cc<scrnhit;cc+=4) {
+                for (bb=0;bb<GameSize.Width;bb+=4) {
+                    for (cc=0;cc<GameSize.Height;cc+=4) {
                         temp_virtual->PutPixel(bb+pattern[aa]/4, cc+pattern[aa]%4, maskCol);
                     }
                 }

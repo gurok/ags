@@ -26,6 +26,7 @@
 #include "ac/mouse.h"
 #include "ac/record.h"
 #include "main/game_run.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "platform/base/agsplatformdriver.h"
 #include "ac/spritecache.h"
@@ -42,7 +43,6 @@ extern GameState play;
 extern CharacterExtras *charextra;
 extern ScriptInvItem scrInv[MAX_INV];
 extern int mouse_ifacebut_xoffs,mouse_ifacebut_yoffs;
-extern int scrnwid,scrnhit;
 extern Bitmap *virtual_screen;
 extern int spritewidth[MAX_SPRITES],spriteheight[MAX_SPRITES];
 extern SpriteCache spriteset;
@@ -172,7 +172,7 @@ int __actual_invscreen() {
     int BUTTONAREAHEIGHT = get_fixed_pixel_size(30);
     int cmode=CURS_ARROW, toret = -1;
     int top_item = 0, num_visible_items = 0;
-    int MAX_ITEMAREA_HEIGHT = ((scrnhit - BUTTONAREAHEIGHT) - get_fixed_pixel_size(20));
+    int MAX_ITEMAREA_HEIGHT = ((GameSize.Height - BUTTONAREAHEIGHT) - get_fixed_pixel_size(20));
     in_inv_screen++;
     inv_screen_newroom = -1;
     Bitmap *ds = NULL;
@@ -222,8 +222,8 @@ start_actinv:
 
     int windowwid = widest*ICONSPERLINE + get_fixed_pixel_size(4);
     if (windowwid < get_fixed_pixel_size(105)) windowwid = get_fixed_pixel_size(105);
-    int windowxp=scrnwid/2-windowwid/2;
-    int windowyp=scrnhit/2-windowhit/2;
+    int windowxp=GameSize.Width/2-windowwid/2;
+    int windowyp=GameSize.Height/2-windowhit/2;
     int buttonyp=windowyp+windowhit-BUTTONAREAHEIGHT;
     color_t draw_color = ds->GetCompatibleColor(play.sierra_inv_color);
     ds->FillRect(Rect(windowxp,windowyp,windowxp+windowwid,windowyp+windowhit), draw_color);

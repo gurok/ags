@@ -69,6 +69,7 @@
 #include "gui/guidialog.h"
 #include "main/game_file.h"
 #include "main/main.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "media/audio/soundclip.h"
 #include "plugin/agsplugin.h"
@@ -95,9 +96,6 @@ extern int numLipLines, curLipLine, curLipLinePhenome;
 
 extern CharacterExtras *charextra;
 extern DialogTopic *dialog;
-
-extern int scrnwid,scrnhit;
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
 
 extern int ifacepopped;  // currently displayed pop-up GUI (-1 if none)
 extern int mouse_on_iface;   // mouse cursor is over this interface
@@ -1083,8 +1081,8 @@ void save_game_header(Stream *out)
 
 void save_game_head_dynamic_values(Stream *out)
 {
-    out->WriteInt32(scrnhit);
-    out->WriteInt32(final_col_dep);
+    out->WriteInt32(GameSize.Height);
+    out->WriteInt32(GameResolution.ColorDepth);
     out->WriteInt32(frames_per_second);
     out->WriteInt32(cur_mode);
     out->WriteInt32(cur_cursor);
@@ -1465,9 +1463,9 @@ void create_savegame_screenshot(Bitmap *&screenShot)
         else
         {
 #if defined(IOS_VERSION) || defined(ANDROID_VERSION) || defined(WINDOWS_VERSION)
-            int color_depth = (psp_gfx_renderer > 0) ? 32 : final_col_dep;
+            int color_depth = (psp_gfx_renderer > 0) ? 32 : GameResolution.ColorDepth;
 #else
-            int color_depth = final_col_dep;
+            int color_depth = GameResolution.ColorDepth;
 #endif
             Bitmap *tempBlock = BitmapHelper::CreateBitmap(virtual_screen->GetWidth(), virtual_screen->GetHeight(), color_depth);
             gfxDriver->GetCopyOfScreenIntoBitmap(tempBlock);
@@ -1604,20 +1602,20 @@ int restore_game_head_dynamic_values(Stream *in, int &sg_cur_mode, int &sg_cur_c
     int gamescrnhit = in->ReadInt32();
     // a 320x240 game, they saved in a 320x200 room but try to restore
     // from within a 320x240 room, make it work
-    if (final_scrn_hit == (gamescrnhit * 12) / 10)
-        gamescrnhit = scrnhit;
+    if (GameResolution.Height == (gamescrnhit * 12) / 10)
+        gamescrnhit = GameSize.Height;
     // they saved in a 320x240 room but try to restore from a 320x200
     // room, fix it
-    else if (gamescrnhit == final_scrn_hit)
-        gamescrnhit = scrnhit;
+    else if (gamescrnhit == GameResolution.Height)
+        gamescrnhit = GameSize.Height;
 
-    if (gamescrnhit != scrnhit) {
+    if (gamescrnhit != GameSize.Height) {
         Display("This game was saved with the interpreter running at a different "
             "resolution. It cannot be restored.");
         return -6;
     }
 
-    if (in->ReadInt32() != final_col_dep) {
+    if (in->ReadInt32() != GameResolution.ColorDepth) {
         Display("This game was saved with the engine running at a different colour depth. It cannot be restored.");
         return -7;
     }
@@ -2347,7 +2345,7 @@ int restore_game_data (Stream *in, const char *nametouse) {
     }
 
     for (vv = 0; vv < game.numgui; vv++) {
-        guibg[vv] = BitmapHelper::CreateBitmap (guis[vv].wid, guis[vv].hit, final_col_dep);
+        guibg[vv] = BitmapHelper::CreateBitmap (guis[vv].wid, guis[vv].hit, GameResolution.ColorDepth);
         guibg[vv] = gfxDriver->ConvertBitmapToSupportedColourDepth(guibg[vv]);
     }
 
@@ -2696,7 +2694,7 @@ void display_switch_in() {
     // This can cause a segfault on Linux
 #if !defined (LINUX_VERSION)
     if (gfxDriver->UsesMemoryBackBuffer())  // make sure all borders are cleared
-        gfxDriver->ClearRectangle(0, 0, final_scrn_wid - 1, final_scrn_hit - 1, NULL);
+        gfxDriver->ClearRectangle(0, 0, GameResolution.Width - 1, GameResolution.Height - 1, NULL);
 #endif
 
     platform->DisplaySwitchIn();

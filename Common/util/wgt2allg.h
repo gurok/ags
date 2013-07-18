@@ -62,7 +62,6 @@ extern "C"
 #endif
 
     //extern int currentcolor;
-    extern int vesa_xres, vesa_yres;
     //extern Common::Bitmap *abuf;
 
     

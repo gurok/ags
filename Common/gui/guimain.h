@@ -108,7 +108,6 @@ extern int mousex, mousey;
 extern int get_adjusted_spritewidth(int spr);
 extern int get_adjusted_spriteheight(int spr);
 extern bool is_sprite_alpha(int spr);
-extern int final_col_dep;
 
 // This function has distinct implementations in Engine and Editor
 extern void draw_sprite_compensate(Common::Bitmap *ds, int spr, int x, int y, int xray);

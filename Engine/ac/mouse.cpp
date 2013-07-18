@@ -30,6 +30,7 @@
 #include "device/mousew32.h"
 #include "ac/spritecache.h"
 #include "gfx/graphicsdriver.h"
+#include "main/graphics_mode.h"
 
 using AGS::Common::Bitmap;
 namespace BitmapHelper = AGS::Common::BitmapHelper;
@@ -71,12 +72,12 @@ int Mouse_GetVisible() {
 
 void SetMouseBounds (int x1, int y1, int x2, int y2) {
     if ((x1 == 0) && (y1 == 0) && (x2 == 0) && (y2 == 0)) {
-        x2 = BASEWIDTH-1;
+        x2 = usetup.base_width-1;
         y2 = MOUSE_MAX_Y - 1;
     }
-    if (x2 == BASEWIDTH) x2 = BASEWIDTH-1;
+    if (x2 == usetup.base_width) x2 = usetup.base_width-1;
     if (y2 == MOUSE_MAX_Y) y2 = MOUSE_MAX_Y - 1;
-    if ((x1 > x2) || (y1 > y2) || (x1 < 0) || (x2 >= BASEWIDTH) ||
+    if ((x1 > x2) || (y1 > y2) || (x1 < 0) || (x2 >= usetup.base_width) ||
         (y1 < 0) || (y2 >= MOUSE_MAX_Y))
         quit("!SetMouseBounds: invalid co-ordinates, must be within (0,0) - (320,200)");
     DEBUG_CONSOLE("Mouse bounds constrained to (%d,%d)-(%d,%d)", x1, y1, x2, y2);
@@ -268,8 +269,8 @@ void SetMousePosition (int newx, int newy) {
         newx = 0;
     if (newy < 0)
         newy = 0;
-    if (newx >= BASEWIDTH)
-        newx = BASEWIDTH - 1;
+    if (newx >= usetup.base_width)
+        newx = usetup.base_width - 1;
     if (newy >= GetMaxScreenHeight())
         newy = GetMaxScreenHeight() - 1;
 
@@ -342,7 +343,7 @@ void set_new_cursor_graphic (int spriteslot) {
     {
         if (blank_mouse_cursor == NULL)
         {
-            blank_mouse_cursor = BitmapHelper::CreateTransparentBitmap(1, 1, final_col_dep);
+            blank_mouse_cursor = BitmapHelper::CreateTransparentBitmap(1, 1, GameResolution.ColorDepth);
         }
         mousecurs[0] = blank_mouse_cursor;
     }

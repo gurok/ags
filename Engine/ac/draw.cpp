@@ -48,6 +48,7 @@
 #include "debug/debug_log.h"
 #include "font/fonts.h"
 #include "gui/guimain.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "media/audio/soundclip.h"
 #include "platform/base/agsplatformdriver.h"
@@ -75,8 +76,6 @@ extern GameSetup usetup;
 extern GameSetupStruct game;
 extern GameState play;
 extern int current_screen_resolution_multiplier;
-extern int scrnwid,scrnhit;
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
 extern ScriptSystem scsystem;
 extern AGSPlatformDriver *platform;
 extern roomstruct thisroom;
@@ -220,14 +219,14 @@ Bitmap *convert_16_to_15(Bitmap *iii) {
 
     if (iii->GetColorDepth() > 16) {
         // we want a 32-to-24 conversion
-        Bitmap *tempbl = BitmapHelper::CreateBitmap(iwid,ihit,final_col_dep);
-        if (final_col_dep < 24) {
+        Bitmap *tempbl = BitmapHelper::CreateBitmap(iwid,ihit,GameResolution.ColorDepth);
+        if (GameResolution.ColorDepth < 24) {
             // 32-to-16
             tempbl->Blit(iii, 0, 0, 0, 0, iwid, ihit);
             return tempbl;
         }
 
-        GFX_VTABLE *vtable = _get_vtable(final_col_dep);
+        GFX_VTABLE *vtable = _get_vtable(GameResolution.ColorDepth);
         if (vtable == NULL) {
             quit("unable to get 24-bit bitmap vtable");
         }
@@ -480,7 +479,7 @@ void update_invalid_region(Bitmap *ds, int x, int y, Bitmap *src) {
         if ((srcdepth == ds->GetColorDepth()) && (ds->IsMemoryBitmap())) {
             int bypp = src->GetBPP();
             // do the fast copy
-            for (i = 0; i < scrnhit; i++) {
+            for (i = 0; i < GameSize.Height; i++) {
                 const uint8_t *src_scanline = src->GetScanLine(i + y);
                 uint8_t *dst_scanline = ds->GetScanLineForWriting(i);
                 const IRRow &dirty_row = dirtyRow[i];
@@ -494,11 +493,11 @@ void update_invalid_region(Bitmap *ds, int x, int y, Bitmap *src) {
         else {
             // do the fast copy
             int rowsInOne;
-            for (i = 0; i < scrnhit; i++) {
+            for (i = 0; i < GameSize.Height; i++) {
                 rowsInOne = 1;
 
                 // if there are rows with identical masks, do them all in one go
-                while ((i+rowsInOne < scrnhit) && (memcmp(&dirtyRow[i], &dirtyRow[i+rowsInOne], sizeof(IRRow)) == 0))
+                while ((i+rowsInOne < GameSize.Height) && (memcmp(&dirtyRow[i], &dirtyRow[i+rowsInOne], sizeof(IRRow)) == 0))
                     rowsInOne++;
 
                 const IRRow &dirty_row = dirtyRow[i];
@@ -561,10 +560,10 @@ void invalidate_rect(int x1, int y1, int x2, int y2) {
 
     int a;
 
-    if (x1 >= scrnwid) x1 = scrnwid-1;
-    if (y1 >= scrnhit) y1 = scrnhit-1;
-    if (x2 >= scrnwid) x2 = scrnwid-1;
-    if (y2 >= scrnhit) y2 = scrnhit-1;
+    if (x1 >= GameSize.Width) x1 = GameSize.Width-1;
+    if (y1 >= GameSize.Height) y1 = GameSize.Height-1;
+    if (x2 >= GameSize.Width) x2 = GameSize.Width-1;
+    if (y2 >= GameSize.Height) y2 = GameSize.Height-1;
     if (x1 < 0) x1 = 0;
     if (y1 < 0) y1 = 0;
     if (x2 < 0) x2 = 0;
@@ -583,7 +582,7 @@ void invalidate_rect(int x1, int y1, int x2, int y2) {
 
     numDirtyBytes += (x2 - x1) * (y2 - y1);
 
-    if (numDirtyBytes > (scrnwid * scrnhit) / 2)
+    if (numDirtyBytes > (GameSize.Width * GameSize.Height) / 2)
     numDirtyRegions = WHOLESCREENDIRTY;
     else {*/
     numDirtyRegions++;
@@ -688,7 +687,7 @@ void mark_current_background_dirty()
 
 int get_screen_y_adjustment(Bitmap *checkFor) {
 
-	if ((BitmapHelper::GetScreenBitmap() == _sub_screen) && (checkFor->GetHeight() < final_scrn_hit))
+	if ((BitmapHelper::GetScreenBitmap() == _sub_screen) && (checkFor->GetHeight() < GameResolution.Height))
         return get_fixed_pixel_size(20);
 
     return 0;
@@ -696,8 +695,8 @@ int get_screen_y_adjustment(Bitmap *checkFor) {
 
 int get_screen_x_adjustment(Bitmap *checkFor) {
 
-	if ((BitmapHelper::GetScreenBitmap() == _sub_screen) && (checkFor->GetWidth() < final_scrn_wid))
-        return (final_scrn_wid - checkFor->GetWidth()) / 2;
+	if ((BitmapHelper::GetScreenBitmap() == _sub_screen) && (checkFor->GetWidth() < GameResolution.Width))
+        return (GameResolution.Width - checkFor->GetWidth()) / 2;
 
     return 0;
 }
@@ -709,16 +708,16 @@ void render_black_borders(int atx, int aty)
         if (aty > 0)
         {
             // letterbox borders
-            blankImage->SetStretch(scrnwid, aty);
+            blankImage->SetStretch(GameSize.Width, aty);
             gfxDriver->DrawSprite(0, -aty, blankImage);
-            gfxDriver->DrawSprite(0, scrnhit, blankImage);
+            gfxDriver->DrawSprite(0, GameSize.Height, blankImage);
         }
         if (atx > 0)
         {
             // sidebar borders for widescreen
-            blankSidebarImage->SetStretch(atx, scrnhit);
+            blankSidebarImage->SetStretch(atx, GameSize.Height);
             gfxDriver->DrawSprite(-atx, 0, blankSidebarImage);
-            gfxDriver->DrawSprite(scrnwid, 0, blankSidebarImage);
+            gfxDriver->DrawSprite(GameSize.Width, 0, blankSidebarImage);
         }
     }
 }
@@ -773,10 +772,10 @@ void render_to_screen(Bitmap *toRender, int atx, int aty) {
 
 void clear_letterbox_borders() {
 
-    if (multiply_up_coordinate(thisroom.height) < final_scrn_hit) {
+    if (multiply_up_coordinate(thisroom.height) < GameResolution.Height) {
         // blank out any traces in borders left by a full-screen room
         gfxDriver->ClearRectangle(0, 0, _old_screen->GetWidth() - 1, get_fixed_pixel_size(20) - 1, NULL);
-        gfxDriver->ClearRectangle(0, final_scrn_hit - get_fixed_pixel_size(20), _old_screen->GetWidth() - 1, final_scrn_hit - 1, NULL);
+        gfxDriver->ClearRectangle(0, GameResolution.Height - get_fixed_pixel_size(20), _old_screen->GetWidth() - 1, GameResolution.Height - 1, NULL);
     }
 
 }
@@ -1300,7 +1299,7 @@ void apply_tint_or_light(int actspsindex, int light_level,
  }
 
  // we can only do tint/light if the colour depths match
- if (final_col_dep == actsps[actspsindex]->GetColorDepth()) {
+ if (GameResolution.ColorDepth == actsps[actspsindex]->GetColorDepth()) {
      Bitmap *oldwas;
      // if the caller supplied a source bitmap, ->Blit from it
      // (used as a speed optimisation where possible)
@@ -2105,7 +2104,7 @@ void draw_fps()
 
     if (fpsDisplay == NULL)
     {
-        fpsDisplay = BitmapHelper::CreateBitmap(get_fixed_pixel_size(100), (wgetfontheight(FONT_SPEECH) + get_fixed_pixel_size(5)), final_col_dep);
+        fpsDisplay = BitmapHelper::CreateBitmap(get_fixed_pixel_size(100), (wgetfontheight(FONT_SPEECH) + get_fixed_pixel_size(5)), GameResolution.ColorDepth);
         fpsDisplay = gfxDriver->ConvertBitmapToSupportedColourDepth(fpsDisplay);
     }
     fpsDisplay->ClearTransparent();
@@ -2124,7 +2123,7 @@ void draw_fps()
     else
         gfxDriver->UpdateDDBFromBitmap(ddb, fpsDisplay, false);
 
-    int yp = scrnhit - fpsDisplay->GetHeight();
+    int yp = GameSize.Height - fpsDisplay->GetHeight();
 
     gfxDriver->DrawSprite(1, yp, ddb);
     invalidate_sprite(1, yp, ddb);
@@ -2299,7 +2298,7 @@ void draw_screen_overlay() {
     char tbuffer[60];
     sprintf(tbuffer,"mpos: %d", channels[SCHAN_SPEECH]->get_pos_ms());
     write_log(tbuffer);
-    int yp = scrnhit - (wgetfontheight(FONT_SPEECH) + 25 * symult);
+    int yp = GameSize.Height - (wgetfontheight(FONT_SPEECH) + 25 * symult);
     ds->SetTextColor(14);
     draw_and_invalidate_text(1, yp, FONT_SPEECH,tbuffer);
     }*/
@@ -2406,17 +2405,17 @@ void update_screen() {
         int barheight = (DEBUG_CONSOLE_NUMLINES - 1) * txtheight + 4;
 
         if (debugConsoleBuffer == NULL)
-            debugConsoleBuffer = BitmapHelper::CreateBitmap(scrnwid, barheight,final_col_dep);
+            debugConsoleBuffer = BitmapHelper::CreateBitmap(GameSize.Width, barheight,GameResolution.ColorDepth);
 
         //Bitmap *ds = GetVirtualScreen();
         //push_screen(ds);
         //ds = debugConsoleBuffer;
         color_t draw_color = debugConsoleBuffer->GetCompatibleColor(15);
-        debugConsoleBuffer->FillRect(Rect (0, 0, scrnwid - 1, barheight), draw_color);
+        debugConsoleBuffer->FillRect(Rect (0, 0, GameSize.Width - 1, barheight), draw_color);
         color_t text_color = debugConsoleBuffer->GetCompatibleColor(16);
         for (int jj = first_debug_line; jj != last_debug_line; jj = (jj + 1) % DEBUG_CONSOLE_NUMLINES) {
             wouttextxy(debugConsoleBuffer, 1, ypp, 0, text_color, debug_line[jj].text);
-            wouttextxy(debugConsoleBuffer, scrnwid - get_fixed_pixel_size(40), ypp, 0, text_color, debug_line[jj].script);
+            wouttextxy(debugConsoleBuffer, GameSize.Width - get_fixed_pixel_size(40), ypp, 0, text_color, debug_line[jj].script);
             ypp += txtheight;
         }
         //buf_graphics.text_color = otextc;

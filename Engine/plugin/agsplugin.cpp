@@ -41,6 +41,7 @@
 #include "debug/debugger.h"
 #include "gui/guidefines.h"
 #include "main/engine.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "media/audio/sound.h"
 #include "plugin/pluginobjectreader.h"
@@ -92,8 +93,6 @@ extern "C"
 
 
 extern IGraphicsDriver *gfxDriver;
-extern int scrnwid,scrnhit;
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
 extern int mousex, mousey;
 extern int displayed_room;
 extern roomstruct thisroom;
@@ -244,11 +243,11 @@ void IAGSEngine::DrawText (int32 x, int32 y, int32 font, int32 color, char *text
 }
 void IAGSEngine::GetScreenDimensions (int32 *width, int32 *height, int32 *coldepth) {
     if (width != NULL)
-        width[0] = scrnwid;
+        width[0] = GameSize.Width;
     if (height != NULL)
-        height[0] = scrnhit;
+        height[0] = GameSize.Height;
     if (coldepth != NULL)
-        coldepth[0] = final_col_dep;
+        coldepth[0] = GameResolution.ColorDepth;
 }
 unsigned char ** IAGSEngine::GetRawBitmapSurface (BITMAP *bmp) {
     if (!is_linear_bitmap (bmp))

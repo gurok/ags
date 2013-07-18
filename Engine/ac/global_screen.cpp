@@ -28,6 +28,7 @@
 #include "platform/base/agsplatformdriver.h"
 #include "gfx/graphicsdriver.h"
 #include "gfx/bitmap.h"
+#include "main/graphics_mode.h"
 
 using AGS::Common::Bitmap;
 namespace BitmapHelper = AGS::Common::BitmapHelper;
@@ -41,18 +42,16 @@ extern AGSPlatformDriver *platform;
 extern color palette[256];
 extern unsigned int loopcounter;
 
-int scrnwid,scrnhit;
 int current_screen_resolution_multiplier = 1;
 int force_letterbox = 0;
 
-int final_scrn_wid=0,final_scrn_hit=0,final_col_dep=0;
 int screen_reset = 0;
 
 int GetMaxScreenHeight () {
-    int maxhit = BASEHEIGHT;
+    int maxhit = usetup.base_height;
     if ((maxhit == 200) || (maxhit == 400))
     {
-        // uh ... BASEHEIGHT depends on Native Coordinates setting so be careful
+        // uh ... usetup.base_height depends on Native Coordinates setting so be careful
         if ((usetup.want_letterbox) && (thisroom.height > maxhit)) 
             maxhit = divide_down_coordinate(multiply_up_coordinate(maxhit) + get_fixed_pixel_size(40));
     }
@@ -96,7 +95,7 @@ void ShakeScreen(int severe) {
     }
     else
     {
-        Bitmap *tty = BitmapHelper::CreateBitmap(scrnwid, scrnhit);
+        Bitmap *tty = BitmapHelper::CreateBitmap(GameSize.Width, GameSize.Height);
         gfxDriver->GetCopyOfScreenIntoBitmap(tty);
         for (hh=0;hh<40;hh++) {
             platform->Delay(50);

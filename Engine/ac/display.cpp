@@ -35,6 +35,7 @@
 #include "gui/guibutton.h"
 #include "gui/guimain.h"
 #include "main/game_run.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "platform/base/agsplatformdriver.h"
 #include "ac/spritecache.h"
@@ -47,7 +48,6 @@ extern GameState play;
 extern GameSetupStruct game;
 extern GUIMain *guis;
 extern int longestline;
-extern int scrnwid,scrnhit;
 extern Bitmap *virtual_screen;
 extern ScreenOverlay screenover[MAX_SCREEN_OVERLAYS];
 extern volatile int timerloop;
@@ -112,7 +112,7 @@ int _display_main(int xx,int yy,int wii,char*todis,int blocking,int usingfont,in
 
     if (xx == OVR_AUTOPLACE) ;
     // centre text in middle of screen
-    else if (yy<0) yy=(scrnhit/2-(numlines*texthit)/2)-3;
+    else if (yy<0) yy=(GameSize.Height/2-(numlines*texthit)/2)-3;
     // speech, so it wants to be above the character's head
     else if (asspch > 0) {
         yy-=numlines*texthit;
@@ -140,10 +140,10 @@ int _display_main(int xx,int yy,int wii,char*todis,int blocking,int usingfont,in
 
         xx = adjust_x_for_guis (xx, yy);
 
-        if (xx + wii >= scrnwid)
-            xx = (scrnwid - wii) - 5;
+        if (xx + wii >= GameSize.Width)
+            xx = (GameSize.Width - wii) - 5;
     }
-    else if (xx<0) xx=scrnwid/2-wii/2;
+    else if (xx<0) xx=GameSize.Width/2-wii/2;
 
     int ee, extraHeight = get_fixed_pixel_size(6);
     Bitmap *ds = GetVirtualScreen();
@@ -151,7 +151,7 @@ int _display_main(int xx,int yy,int wii,char*todis,int blocking,int usingfont,in
     if (blocking < 2)
         remove_screen_overlay(OVER_TEXTMSG);
 
-    Bitmap *text_window_ds = BitmapHelper::CreateTransparentBitmap((wii > 0) ? wii : 2, numlines*texthit + extraHeight, final_col_dep);
+    Bitmap *text_window_ds = BitmapHelper::CreateTransparentBitmap((wii > 0) ? wii : 2, numlines*texthit + extraHeight, GameResolution.ColorDepth);
     SetVirtualScreen(text_window_ds);
 
     // inform draw_text_window to free the old bitmap
@@ -177,7 +177,7 @@ int _display_main(int xx,int yy,int wii,char*todis,int blocking,int usingfont,in
 
         if (drawBackground)
             draw_text_window_and_bar(&text_window_ds, wantFreeScreenop, &ttxleft, &ttxtop, &xx, &yy, &wii, &text_color, 0, usingGui);
-        else if ((ShouldAntiAliasText()) && (final_col_dep >= 24))
+        else if ((ShouldAntiAliasText()) && (GameResolution.ColorDepth >= 24))
             alphaChannel = true;
 
         for (ee=0;ee<numlines;ee++) {
@@ -630,7 +630,7 @@ void draw_text_window(Bitmap **text_window_ds, bool should_free_ds,
 
         if (should_free_ds)
             delete *text_window_ds;
-        *text_window_ds = BitmapHelper::CreateTransparentBitmap(wii[0],ovrheight+6+spriteheight[tbnum]*2,final_col_dep);
+        *text_window_ds = BitmapHelper::CreateTransparentBitmap(wii[0],ovrheight+6+spriteheight[tbnum]*2,GameResolution.ColorDepth);
         ds = SetVirtualScreen(*text_window_ds);
         int xoffs=spritewidth[tbnum],yoffs=spriteheight[tbnum];
         draw_button_background(ds, xoffs,yoffs,(ds->GetWidth() - xoffs) - 1,(ds->GetHeight() - yoffs) - 1,&guis[ifnum]);
@@ -651,7 +651,7 @@ void draw_text_window_and_bar(Bitmap **text_window_ds, bool should_free_ds,
         // top bar on the dialog window with character's name
         // create an enlarged window, then free the old one
         Bitmap *ds = *text_window_ds;
-        Bitmap *newScreenop = BitmapHelper::CreateBitmap(ds->GetWidth(), ds->GetHeight() + topBar.height, final_col_dep);
+        Bitmap *newScreenop = BitmapHelper::CreateBitmap(ds->GetWidth(), ds->GetHeight() + topBar.height, GameResolution.ColorDepth);
         newScreenop->Blit(ds, 0, 0, 0, topBar.height, ds->GetWidth(), ds->GetHeight());
         delete *text_window_ds;
         *text_window_ds = newScreenop;

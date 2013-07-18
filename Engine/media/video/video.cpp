@@ -24,6 +24,7 @@
 #include "ac/global_display.h"
 #include "ac/mouse.h"
 #include "ac/record.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "platform/base/agsplatformdriver.h"
 #include "gfx/bitmap.h"
@@ -37,8 +38,6 @@ namespace BitmapHelper = AGS::Common::BitmapHelper;
 extern GameSetupStruct game;
 extern GameState play;
 extern IGraphicsDriver *gfxDriver;
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
-extern int scrnwid,scrnhit;
 extern Bitmap *virtual_screen;
 
 extern int psp_video_framedrop;
@@ -83,9 +82,9 @@ extern "C" int fli_callback() {
         usebuf=hicol_buf;
     }
     if (stretch_flc == 0)
-        fli_target->Blit(usebuf, 0,0,scrnwid/2-fliwidth/2,scrnhit/2-fliheight/2,scrnwid,scrnhit);
+        fli_target->Blit(usebuf, 0,0,GameSize.Width/2-fliwidth/2,GameSize.Height/2-fliheight/2,GameSize.Width,GameSize.Height);
     else 
-        fli_target->StretchBlt(usebuf, RectWH(0,0,fliwidth,fliheight), RectWH(0,0,scrnwid,scrnhit));
+        fli_target->StretchBlt(usebuf, RectWH(0,0,fliwidth,fliheight), RectWH(0,0,GameSize.Width,GameSize.Height));
 
     gfxDriver->UpdateDDBFromBitmap(fli_ddb, fli_target, false);
     gfxDriver->DrawSprite(0, 0, fli_ddb);
@@ -116,8 +115,8 @@ int theora_playing_callback(BITMAP *theoraBuffer)
     }
     if (stretch_flc) 
     {
-        drawAtX = scrnwid / 2 - fliTargetWidth / 2;
-        drawAtY = scrnhit / 2 - fliTargetHeight / 2;
+        drawAtX = GameSize.Width / 2 - fliTargetWidth / 2;
+        drawAtY = GameSize.Height / 2 - fliTargetHeight / 2;
         if (!gfxDriver->HasAcceleratedStretchAndFlip())
         {
             fli_target->StretchBlt(&gl_TheoraBuffer, RectWH(0, 0, gl_TheoraBuffer.GetWidth(), gl_TheoraBuffer.GetHeight()), 
@@ -135,8 +134,8 @@ int theora_playing_callback(BITMAP *theoraBuffer)
     else
     {
         gfxDriver->UpdateDDBFromBitmap(fli_ddb, &gl_TheoraBuffer, false);
-        drawAtX = scrnwid / 2 - gl_TheoraBuffer.GetWidth() / 2;
-        drawAtY = scrnhit / 2 - gl_TheoraBuffer.GetHeight() / 2;
+        drawAtX = GameSize.Width / 2 - gl_TheoraBuffer.GetWidth() / 2;
+        drawAtY = GameSize.Height / 2 - gl_TheoraBuffer.GetHeight() / 2;
     }
 
     gfxDriver->DrawSprite(drawAtX, drawAtY, fli_ddb);
@@ -165,22 +164,22 @@ APEG_STREAM* get_theora_size(const char *fileName, int *width, int *height)
 void calculate_destination_size_maintain_aspect_ratio(int vidWidth, int vidHeight, int *targetWidth, int *targetHeight)
 {
     float aspectRatioVideo = (float)vidWidth / (float)vidHeight;
-    float aspectRatioScreen = (float)scrnwid / (float)scrnhit;
+    float aspectRatioScreen = (float)GameSize.Width / (float)GameSize.Height;
 
     if (aspectRatioVideo == aspectRatioScreen)
     {
-        *targetWidth = scrnwid;
-        *targetHeight = scrnhit;
+        *targetWidth = GameSize.Width;
+        *targetHeight = GameSize.Height;
     }
     else if (aspectRatioVideo > aspectRatioScreen)
     {
-        *targetWidth = scrnwid;
-        *targetHeight = (int)(((float)scrnwid / aspectRatioVideo) + 0.5f);
+        *targetWidth = GameSize.Width;
+        *targetHeight = (int)(((float)GameSize.Width / aspectRatioVideo) + 0.5f);
     }
     else
     {
-        *targetHeight = scrnhit;
-        *targetWidth = (float)scrnhit * aspectRatioVideo;
+        *targetHeight = GameSize.Height;
+        *targetWidth = (float)GameSize.Height * aspectRatioVideo;
     }
 
 }
@@ -214,7 +213,7 @@ void play_theora_video(const char *name, int skip, int flags)
     }
 
     fli_target = NULL;
-    //fli_buffer = BitmapHelper::CreateBitmap_(final_col_dep, videoWidth, videoHeight);
+    //fli_buffer = BitmapHelper::CreateBitmap_(GameResolution.ColorDepth, videoWidth, videoHeight);
     calculate_destination_size_maintain_aspect_ratio(videoWidth, videoHeight, &fliTargetWidth, &fliTargetHeight);
 
     if ((fliTargetWidth == videoWidth) && (fliTargetHeight == videoHeight) && (stretch_flc))
@@ -225,7 +224,7 @@ void play_theora_video(const char *name, int skip, int flags)
 
     if ((stretch_flc) && (!gfxDriver->HasAcceleratedStretchAndFlip()))
     {
-        fli_target = BitmapHelper::CreateBitmap(scrnwid, scrnhit, final_col_dep);
+        fli_target = BitmapHelper::CreateBitmap(GameSize.Width, GameSize.Height, GameResolution.ColorDepth);
         fli_target->Clear();
         fli_ddb = gfxDriver->CreateDDBFromBitmap(fli_target, false, true);
     }

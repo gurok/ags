@@ -501,7 +501,7 @@ void init_and_register_fonts()
         if (fontsize == 0)
             fontsize = 8;
 
-        if ((game.options[OPT_NOSCALEFNT] == 0) && (game.default_resolution > 2))
+        if ((game.options[OPT_NOSCALEFNT] == 0) && (game.IsHiRes()))
             fontsize *= 2;
 
         if (!wloadfont_size(ee, fontsize))

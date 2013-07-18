@@ -47,6 +47,7 @@
 #include "ac/gamestate.h"
 #include "debug/debug_log.h"
 #include "main/game_run.h"
+#include "main/graphics_mode.h"
 #include "main/update.h"
 #include "ac/spritecache.h"
 #include "util/string_utils.h"
@@ -86,7 +87,6 @@ extern int numscreenover;
 extern int said_text;
 extern int our_eip;
 extern int update_music_at;
-extern int scrnwid,scrnhit;
 extern int current_screen_resolution_multiplier;
 extern int cur_mode;
 extern int screen_is_dirty;
@@ -608,12 +608,12 @@ void Character_LockViewFrame(CharacterInfo *chaa, int view, int loop, int frame)
 void Character_LockViewOffset(CharacterInfo *chap, int vii, int xoffs, int yoffs) {
     Character_LockView(chap, vii);
 
-    if ((current_screen_resolution_multiplier == 1) && (game.default_resolution >= 3)) {
+    if ((current_screen_resolution_multiplier == 1) && (game.IsHiRes())) {
         // running a 640x400 game at 320x200, adjust
         xoffs /= 2;
         yoffs /= 2;
     }
-    else if ((current_screen_resolution_multiplier > 1) && (game.default_resolution <= 2)) {
+    else if ((current_screen_resolution_multiplier > 1) && (!game.IsHiRes())) {
         // running a 320x200 game at 640x400, adjust
         xoffs *= 2;
         yoffs *= 2;
@@ -1560,13 +1560,13 @@ void walk_character(int chac,int tox,int toy,int ignwal, bool autoWalkAnims) {
     set_route_move_speed(move_speed_x, move_speed_y);
     set_color_depth(8);
     int mslot=find_route(charX, charY, tox, toy, prepare_walkable_areas(chac), chac+CHMLSOFFS, 1, ignwal);
-    set_color_depth(final_col_dep);
+    set_color_depth(GameResolution.ColorDepth);
     if (mslot>0) {
         chin->walking = mslot;
         mls[mslot].direct = ignwal;
 
         if ((game.options[OPT_NATIVECOORDINATES] != 0) &&
-            (game.default_resolution > 2))
+            (game.IsHiRes()))
         {
             convert_move_path_to_high_res(&mls[mslot]);
         }
@@ -2357,7 +2357,7 @@ void _displayspeech(char*texx, int aschar, int xx, int yy, int widd, int isThoug
     int allowShrink = 0;
     int bwidth = widd;
     if (bwidth < 0)
-        bwidth = scrnwid/2 + scrnwid/4;
+        bwidth = GameSize.Width/2 + GameSize.Width/4;
 
     our_eip=151;
 
@@ -2546,8 +2546,8 @@ void _displayspeech(char*texx, int aschar, int xx, int yy, int widd, int isThoug
 
             // if they accidentally used a large full-screen image as the sierra-style
             // talk view, correct it
-            if ((game.options[OPT_SPEECHTYPE] != 3) && (bigx > scrnwid - get_fixed_pixel_size(50)))
-                bigx = scrnwid - get_fixed_pixel_size(50);
+            if ((game.options[OPT_SPEECHTYPE] != 3) && (bigx > GameSize.Width - get_fixed_pixel_size(50)))
+                bigx = GameSize.Width - get_fixed_pixel_size(50);
 
             if (widd > 0)
                 bwidth = widd - bigx;
@@ -2561,7 +2561,7 @@ void _displayspeech(char*texx, int aschar, int xx, int yy, int widd, int isThoug
 
             if (game.options[OPT_SPEECHTYPE] == 3) {
                 // QFG4-style whole screen picture
-                closeupface = BitmapHelper::CreateBitmap(scrnwid, scrnhit, spriteset[viptr->loops[0].frames[0].pic]->GetColorDepth());
+                closeupface = BitmapHelper::CreateBitmap(GameSize.Width, GameSize.Height, spriteset[viptr->loops[0].frames[0].pic]->GetColorDepth());
                 closeupface->Clear(0);
                 if (xx < 0 && play.speech_portrait_placement)
                 {
@@ -2575,9 +2575,9 @@ void _displayspeech(char*texx, int aschar, int xx, int yy, int widd, int isThoug
                 }
                 else
                 {
-                    view_frame_y = scrnhit/2 - spriteheight[viptr->loops[0].frames[0].pic]/2;
+                    view_frame_y = GameSize.Height/2 - spriteheight[viptr->loops[0].frames[0].pic]/2;
                 }
-                bigx = scrnwid/2 - get_fixed_pixel_size(20);
+                bigx = GameSize.Width/2 - get_fixed_pixel_size(20);
                 ovr_type = OVER_COMPLETE;
                 ovr_yp = 0;
                 tdyp = -1;  // center vertically
@@ -2614,7 +2614,7 @@ void _displayspeech(char*texx, int aschar, int xx, int yy, int widd, int isThoug
                     tdxp += get_fixed_pixel_size(16);
                 }
 
-                int maxWidth = (scrnwid - tdxp) - get_fixed_pixel_size(5) - 
+                int maxWidth = (GameSize.Width - tdxp) - get_fixed_pixel_size(5) - 
                     get_textwindow_border_width (play.speech_textwindow_gui) / 2;
 
                 if (bwidth > maxWidth)
@@ -2634,7 +2634,7 @@ void _displayspeech(char*texx, int aschar, int xx, int yy, int widd, int isThoug
                     tdxp = get_fixed_pixel_size(9);
                     if (play.speech_portrait_placement)
                     {
-                        overlay_x = (scrnwid - bigx) - play.speech_portrait_x;
+                        overlay_x = (GameSize.Width - bigx) - play.speech_portrait_x;
                         int maxWidth = overlay_x - tdxp - get_fixed_pixel_size(9) - 
                             get_textwindow_border_width (play.speech_textwindow_gui) / 2;
                         if (bwidth > maxWidth)
@@ -2642,7 +2642,7 @@ void _displayspeech(char*texx, int aschar, int xx, int yy, int widd, int isThoug
                     }
                     else
                     {
-                        overlay_x = (scrnwid - bigx) - get_fixed_pixel_size(5);
+                        overlay_x = (GameSize.Width - bigx) - get_fixed_pixel_size(5);
                     }
                 }
                 else {
@@ -2704,11 +2704,11 @@ void _displayspeech(char*texx, int aschar, int xx, int yy, int widd, int isThoug
                 views[speakingChar->view].loops[speakingChar->loop].frames[0].speed;
 
             if (widd < 0) {
-                bwidth = scrnwid/2 + scrnwid/6;
+                bwidth = GameSize.Width/2 + GameSize.Width/6;
                 // If they are close to the screen edge, make the text narrower
                 int relx = multiply_up_coordinate(speakingChar->x) - offsetx;
-                if ((relx < scrnwid / 4) || (relx > scrnwid - (scrnwid / 4)))
-                    bwidth -= scrnwid / 5;
+                if ((relx < GameSize.Width / 4) || (relx > GameSize.Width - (GameSize.Width / 4)))
+                    bwidth -= GameSize.Width / 5;
             }
             /*   this causes the text to bob up and down as they talk
             tdxp = OVR_AUTOPLACE;

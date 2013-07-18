@@ -63,7 +63,6 @@ extern "C"
 #endif
 
 //int currentcolor;
-int vesa_xres, vesa_yres;
 //Bitmap *abuf;
 
   void wsetrgb(int coll, int r, int g, int b, color * pall)

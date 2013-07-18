@@ -37,6 +37,7 @@
 #include "debug/debug_log.h"
 #include "debug/debugger.h"
 #include "main/main.h"
+#include "main/graphics_mode.h"
 #include "ac/spritecache.h"
 #include "gfx/bitmap.h"
 #include "gfx/graphicsdriver.h"
@@ -57,8 +58,6 @@ extern TreeMap *transtree;
 extern int offsetx, offsety;
 extern int displayed_room, starting_room;
 extern MoveList *mls;
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
-extern int scrnwid,scrnhit;
 extern char transFileName[MAX_PATH];
 
 void script_debug(int cmdd,int dataa) {
@@ -75,7 +74,7 @@ void script_debug(int cmdd,int dataa) {
         const char *filterName = filter->GetVersionBoxText();
         sprintf(toDisplay,"Adventure Game Studio run-time engine[ACI version %s"
             "[Running %d x %d at %d-bit %s[GFX: %s[%s" "Sprite cache size: %ld KB (limit %ld KB; %ld locked)",
-            EngineVersion.LongString.GetCStr(), final_scrn_wid,final_scrn_hit,final_col_dep, (convert_16bit_bgr) ? "BGR" : "",
+            EngineVersion.LongString.GetCStr(), GameResolution.Width,GameResolution.Height,GameResolution.ColorDepth, (convert_16bit_bgr) ? "BGR" : "",
             gfxDriver->GetDriverName(), filterName,
             spriteset.cachesize / 1024, spriteset.maxCacheSize / 1024, spriteset.lockedSize / 1024);
         if (play.seperate_music_lib)
@@ -97,7 +96,7 @@ void script_debug(int cmdd,int dataa) {
     {  // show walkable areas from here
         Bitmap *tempw=BitmapHelper::CreateBitmap(thisroom.walls->GetWidth(),thisroom.walls->GetHeight());
         tempw->Blit(prepare_walkable_areas(-1),0,0,0,0,tempw->GetWidth(),tempw->GetHeight());
-        Bitmap *stretched = BitmapHelper::CreateBitmap(scrnwid, scrnhit);
+        Bitmap *stretched = BitmapHelper::CreateBitmap(GameSize.Width, GameSize.Height);
         stretched->StretchBlt(tempw,
 			RectWH(-offsetx, -offsety, get_fixed_pixel_size(tempw->GetWidth()), get_fixed_pixel_size(tempw->GetHeight())),
 			Common::kBitmap_Transparency);

@@ -313,5 +313,5 @@ int finddefaultcontrol(int flagmask)
 }
 
 int GetBaseWidth () {
-    return BASEWIDTH;
+    return usetup.base_width;
 }

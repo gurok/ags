@@ -39,6 +39,7 @@
 #include "device/mousew32.h"
 #include "gfx/bitmap.h"
 #include "gfx/gfx_util.h"
+#include "main/graphics_mode.h"
 
 using AGS::Common::Bitmap;
 
@@ -78,7 +79,6 @@ int disable_mgetgraphpos = 0;
 char ignore_bounds = 0;
 extern char alpha_blend_cursor ;
 Bitmap *savebk = NULL, *mousecurs[MAXCURSORS];
-extern int vesa_xres, vesa_yres;
 extern color palette[256];
 
 
@@ -160,15 +160,15 @@ void domouse(int str)
   mousex -= hotx;
   mousey -= hoty;
 
-  if (mousex + poow >= vesa_xres)
-    poow = vesa_xres - mousex;
+  if (mousex + poow >= GameSize.Width)
+    poow = GameSize.Width - mousex;
 
-  if (mousey + pooh >= vesa_yres)
-    pooh = vesa_yres - mousey;
+  if (mousey + pooh >= GameSize.Height)
+    pooh = GameSize.Height - mousey;
 
   Bitmap *ds = GetVirtualScreen();
 
-  ds->SetClip(Rect(0, 0, vesa_xres - 1, vesa_yres - 1));
+  ds->SetClip(Rect(0, 0, GameSize.Width - 1, GameSize.Height - 1));
   if ((str == 0) & (mouseturnedon == TRUE)) {
     if ((mousex != smx) | (mousey != smy)) {    // the mouse has moved
       wputblock(ds, smx, smy, savebk, 0);

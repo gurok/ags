@@ -937,7 +937,7 @@ void update_font_sizes() {
   // scale up fonts if necessary
   wtext_multiply = 1;
   if ((thisgame.options[OPT_NOSCALEFNT] == 0) &&
-      (thisgame.default_resolution >= 3)) {
+      (thisgame.IsHiRes())) {
     wtext_multiply = 2;
   }
 
@@ -947,7 +947,7 @@ void update_font_sizes() {
       reload_font (bb);
   }
 
-  if (thisgame.default_resolution >= 3) {
+  if (thisgame.IsHiRes()) {
     sxmult = 2;
     symult = 2;
   }
@@ -1034,8 +1034,8 @@ void drawFontAt (int hdc, int fontnum, int x,int y) {
 
   update_font_sizes();
 
-  int doubleSize = (thisgame.default_resolution < 3) ? 2 : 1;
-  int blockSize = (thisgame.default_resolution < 3) ? 1 : 2;
+  int doubleSize = (!thisgame.IsHiRes()) ? 2 : 1;
+  int blockSize = (!thisgame.IsHiRes()) ? 1 : 2;
   antiAliasFonts = thisgame.options[OPT_ANTIALIASFONTS];
 
   // we can't antialias font because changing col dep to 16 here causes
@@ -1413,10 +1413,10 @@ bool reload_font(int curFont)
   int fsize = thisgame.fontflags[curFont] & FFLG_SIZEMASK;
   // if the font is designed for 640x400, half it
   if (thisgame.options[OPT_NOSCALEFNT]) {
-    if (thisgame.default_resolution <= 2)
+    if (!thisgame.IsHiRes())
       fsize /= 2;
   }
-  else if (thisgame.default_resolution >= 3) {
+  else if (thisgame.IsHiRes()) {
     // designed for 320x200, double it up
     fsize *= 2;
   }
@@ -1884,7 +1884,7 @@ void copy_global_palette_to_room_palette()
 
 const char* load_room_file(const char*rtlo) {
 
-  load_room((char*)rtlo, &thisroom, (thisgame.default_resolution > 2));
+  load_room((char*)rtlo, &thisroom, (thisgame.IsHiRes()));
 
   if (thisroom.wasversion < kRoomVersion_250b) 
   {
@@ -2650,7 +2650,7 @@ void DrawSpriteToBuffer(int sprNum, int x, int y, int scaleFactor) {
 	  todraw = spriteset[0];
 
 	if (((thisgame.spriteflags[sprNum] & SPF_640x400) == 0) &&
-		(thisgame.default_resolution > 2))
+		(thisgame.IsHiRes()))
 	{
 		scaleFactor *= 2;
 	}
@@ -2719,7 +2719,7 @@ void UpdateSpriteFlags(SpriteFolder ^folder)
 
 void GameUpdated(Game ^game) {
   thisgame.color_depth = (int)game->Settings->ColorDepth;
-  thisgame.default_resolution = (int)game->Settings->Resolution;
+  thisgame.SetDefaultResolution((GameResolutionType)game->Settings->Resolution);
 
   thisgame.options[OPT_NOSCALEFNT] = game->Settings->FontsForHiRes;
   thisgame.options[OPT_ANTIALIASFONTS] = game->Settings->AntiAliasFonts;
@@ -3054,7 +3054,7 @@ int SetNewSpriteFromBitmap(int slot, System::Drawing::Bitmap^ bmp, int spriteImp
 	}
 
 	thisgame.spriteflags[slot] = 0;
-	if (thisgame.default_resolution > 2)
+	if (thisgame.IsHiRes())
 	{
 		thisgame.spriteflags[slot] |= SPF_640x400;
 	}
@@ -3074,7 +3074,7 @@ int SetNewSpriteFromBitmap(int slot, System::Drawing::Bitmap^ bmp, int spriteImp
 
 	SetNewSprite(slot, tempsprite);
 
-	return (thisgame.default_resolution > 2) ? 1 : 0;
+	return (thisgame.IsHiRes()) ? 1 : 0;
 }
 
 void SetBitmapPaletteFromGlobalPalette(System::Drawing::Bitmap ^bmp)
@@ -3743,7 +3743,7 @@ Game^ load_old_game_dta_file(const char *fileName)
 	game->Settings->NumberDialogOptions = (thisgame.options[OPT_DIALOGNUMBERED] != 0);
 	game->Settings->PixelPerfect = (thisgame.options[OPT_PIXPERFECT] != 0);
 	game->Settings->PlaySoundOnScore = thisgame.options[OPT_SCORESOUND];
-	game->Settings->Resolution = (GameResolutions)thisgame.default_resolution;
+	game->Settings->Resolution = (GameResolutions)thisgame.GetDefaultResolution();
 	game->Settings->RoomTransition = (RoomTransitionStyle)thisgame.options[OPT_FADETYPE];
 	game->Settings->SaveScreenshots = (thisgame.options[OPT_SAVESCREENSHOT] != 0);
 	game->Settings->SkipSpeech = (SkipSpeechStyle)thisgame.options[OPT_NOSKIPTEXT];
@@ -4869,7 +4869,7 @@ void save_game_to_dta_file(Game^ game, const char *fileName)
 	thisgame.options[OPT_DIALOGNUMBERED] = game->Settings->NumberDialogOptions;
 	thisgame.options[OPT_PIXPERFECT] = game->Settings->PixelPerfect;
 	thisgame.options[OPT_SCORESOUND] = 0; // saved elsewhere now to make it 32-bit
-	thisgame.default_resolution = (int)game->Settings->Resolution;
+	thisgame.SetDefaultResolution((GameResolutionType)game->Settings->Resolution);
 	thisgame.options[OPT_FADETYPE] = (int)game->Settings->RoomTransition;
 	thisgame.options[OPT_RUNGAMEDLGOPTS] = game->Settings->RunGameLoopsWhileDialogOptionsDisplayed;
 	thisgame.options[OPT_SAVESCREENSHOT] = game->Settings->SaveScreenshots;

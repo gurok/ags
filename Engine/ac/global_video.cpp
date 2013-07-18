@@ -28,6 +28,7 @@
 #include "debug/debugger.h"
 #include "debug/out.h"
 #include "media/video/video.h"
+#include "main/graphics_mode.h"
 #include "util/stream.h"
 #include "gfx/graphicsdriver.h"
 #include "gfx/bitmap.h"
@@ -51,10 +52,6 @@ extern Bitmap *fli_buffer;
 extern IDriverDependantBitmap *fli_ddb;
 extern Bitmap *fli_target;
 extern IGraphicsDriver *gfxDriver;
-
-// defined in ac_screen
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
-extern int scrnwid,scrnhit;
 
 void play_flc_file(int numb,int playflags) {
     color oldpal[256];
@@ -96,15 +93,15 @@ void play_flc_file(int numb,int playflags) {
     fliheight = in->ReadInt16();
     delete in;
     if (game.color_depth > 1) {
-        hicol_buf=BitmapHelper::CreateBitmap(fliwidth,fliheight,final_col_dep);
+        hicol_buf=BitmapHelper::CreateBitmap(fliwidth,fliheight,GameResolution.ColorDepth);
         hicol_buf->Clear();
     }
     // override the stretch option if necessary
-    if ((fliwidth==scrnwid) && (fliheight==scrnhit))
+    if ((fliwidth==GameSize.Width) && (fliheight==GameSize.Height))
         stretch_flc = 0;
-    else if ((fliwidth > scrnwid) || (fliheight > scrnhit))
+    else if ((fliwidth > GameSize.Width) || (fliheight > GameSize.Height))
         stretch_flc = 1;
-    fli_buffer=BitmapHelper::CreateBitmap(fliwidth,fliheight,8); //640,400); //scrnwid,scrnhit);
+    fli_buffer=BitmapHelper::CreateBitmap(fliwidth,fliheight,8); //640,400); //GameSize.Width,GameSize.Height);
     if (fli_buffer==NULL) quit("Not enough memory to play animation");
     fli_buffer->Clear();
 
@@ -115,7 +112,7 @@ void play_flc_file(int numb,int playflags) {
         render_to_screen(screen_bmp, 0, 0);
     }
 
-    fli_target = BitmapHelper::CreateBitmap(screen_bmp->GetWidth(), screen_bmp->GetHeight(), final_col_dep);
+    fli_target = BitmapHelper::CreateBitmap(screen_bmp->GetWidth(), screen_bmp->GetHeight(), GameResolution.ColorDepth);
     fli_ddb = gfxDriver->CreateDDBFromBitmap(fli_target, false, true);
 
 	if (play_fli(flicnam,(BITMAP*)fli_buffer->GetAllegroBitmap(),0,fli_callback)==FLI_ERROR)

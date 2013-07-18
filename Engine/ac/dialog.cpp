@@ -41,6 +41,7 @@
 #include "gui/guimain.h"
 #include "gui/guitextbox.h"
 #include "main/game_run.h"
+#include "main/graphics_mode.h"
 #include "media/audio/audio.h"
 #include "platform/base/agsplatformdriver.h"
 #include "script/script.h"
@@ -56,7 +57,6 @@ extern GameSetupStruct game;
 extern GameState play;
 extern ccInstance *dialogScriptsInst;
 extern int in_new_room;
-extern int scrnwid,scrnhit;
 extern CharacterInfo*playerchar;
 extern SpriteCache spriteset;
 extern int spritewidth[MAX_SPRITES],spriteheight[MAX_SPRITES];
@@ -439,7 +439,7 @@ int show_dialog_options(int dlgnum, int sayChosenOption, bool runGameLoopsInBack
 
   update_polled_stuff_if_runtime();
 
-  Bitmap *tempScrn = BitmapHelper::CreateBitmap(BitmapHelper::GetScreenBitmap()->GetWidth(), BitmapHelper::GetScreenBitmap()->GetHeight(), final_col_dep);
+  Bitmap *tempScrn = BitmapHelper::CreateBitmap(BitmapHelper::GetScreenBitmap()->GetWidth(), BitmapHelper::GetScreenBitmap()->GetHeight(), GameResolution.ColorDepth);
 
   set_mouse_cursor(CURS_ARROW);
 
@@ -472,7 +472,7 @@ int show_dialog_options(int dlgnum, int sayChosenOption, bool runGameLoopsInBack
   // is not enabled.
   color_t draw_color;
   if ((numdisp > 1) || (parserInput != NULL) || (play.show_single_dialog_option)) {
-    draw_color = ds->GetCompatibleColor(0); //ds->FillRect(Rect(0,dlgyp-1,scrnwid-1,dlgyp+numdisp*txthit+1);
+    draw_color = ds->GetCompatibleColor(0); //ds->FillRect(Rect(0,dlgyp-1,GameSize.Width-1,dlgyp+numdisp*txthit+1);
     int areawid, is_textwindow = 0;
     int forecol = 14, savedwid;
 
@@ -521,16 +521,16 @@ int show_dialog_options(int dlgnum, int sayChosenOption, bool runGameLoopsInBack
       }
     }
     else {
-      //dlgyp=(scrnhit-numdisp*txthit)-1;
-      areawid=scrnwid-5;
+      //dlgyp=(GameSize.Height-numdisp*txthit)-1;
+      areawid=GameSize.Width-5;
       GET_OPTIONS_HEIGHT
-      dlgyp = scrnhit - needheight;
-      ds->FillRect(Rect(0,dlgyp-1,scrnwid-1,scrnhit-1), draw_color);
+      dlgyp = GameSize.Height - needheight;
+      ds->FillRect(Rect(0,dlgyp-1,GameSize.Width-1,GameSize.Height-1), draw_color);
 
       dirtyx = 0;
       dirtyy = dlgyp - 1;
-      dirtywidth = scrnwid;
-      dirtyheight = scrnhit - dirtyy;
+      dirtywidth = GameSize.Width;
+      dirtyheight = GameSize.Height - dirtyy;
     }
     if (!is_textwindow)
       areawid -= multiply_up_coordinate(play.dialog_options_x) * 2;
@@ -551,7 +551,7 @@ int show_dialog_options(int dlgnum, int sayChosenOption, bool runGameLoopsInBack
 
     if (usingCustomRendering)
     {
-      tempScrn = recycle_bitmap(tempScrn, final_col_dep, 
+      tempScrn = recycle_bitmap(tempScrn, GameResolution.ColorDepth, 
         multiply_up_coordinate(ccDialogOptionsRendering.width), 
         multiply_up_coordinate(ccDialogOptionsRendering.height));
     }
@@ -610,11 +610,11 @@ int show_dialog_options(int dlgnum, int sayChosenOption, bool runGameLoopsInBack
       GET_OPTIONS_HEIGHT
 
       savedwid = areawid;
-      int txoffs=0,tyoffs=0,yspos = scrnhit/2-needheight/2;
-      int xspos = scrnwid/2 - areawid/2;
+      int txoffs=0,tyoffs=0,yspos = GameSize.Height/2-needheight/2;
+      int xspos = GameSize.Width/2 - areawid/2;
       // shift window to the right if QG4-style full-screen pic
       if ((game.options[OPT_SPEECHTYPE] == 3) && (said_text > 0))
-        xspos = (scrnwid - areawid) - get_fixed_pixel_size(10);
+        xspos = (GameSize.Width - areawid) - get_fixed_pixel_size(10);
 
       // needs to draw the right text window, not the default
       push_screen(ds);
@@ -648,7 +648,7 @@ int show_dialog_options(int dlgnum, int sayChosenOption, bool runGameLoopsInBack
         // fonts don't re-alias themselves
         if (game.options[OPT_DIALOGIFACE] == 0) {
           draw_color = ds->GetCompatibleColor(16);
-          ds->FillRect(Rect(0,dlgyp-1,scrnwid-1,scrnhit-1), draw_color);
+          ds->FillRect(Rect(0,dlgyp-1,GameSize.Width-1,GameSize.Height-1), draw_color);
         }
         else {
           GUIMain* guib = &guis[game.options[OPT_DIALOGIFACE]];
@@ -658,7 +658,7 @@ int show_dialog_options(int dlgnum, int sayChosenOption, bool runGameLoopsInBack
       }
 
       dirtyx = 0;
-      dirtywidth = scrnwid;
+      dirtywidth = GameSize.Width;
 
       if (game.options[OPT_DIALOGIFACE] > 0) 
       {
@@ -686,9 +686,9 @@ int show_dialog_options(int dlgnum, int sayChosenOption, bool runGameLoopsInBack
       curyp = dlgyp;
       curyp = write_dialog_options(ds, dlgxp,curyp,numdisp,mouseison,areawid,bullet_wid,usingfont,dtop,disporder,dispyp,txthit,forecol);
 
-      /*if (curyp > scrnhit) {
-        dlgyp = scrnhit - (curyp - dlgyp);
-        ds->FillRect(Rect(0,dlgyp-1,scrnwid-1,scrnhit-1);
+      /*if (curyp > GameSize.Height) {
+        dlgyp = GameSize.Height - (curyp - dlgyp);
+        ds->FillRect(Rect(0,dlgyp-1,GameSize.Width-1,GameSize.Height-1);
         goto redraw_options;
       }*/
       if (parserInput)

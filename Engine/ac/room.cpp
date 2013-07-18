@@ -61,6 +61,7 @@
 #include "core/assetmanager.h"
 #include "ac/dynobj/all_dynamicclasses.h"
 #include "gfx/bitmap.h"
+#include "main/graphics_mode.h"
 
 using AGS::Common::Bitmap;
 using AGS::Common::Stream;
@@ -89,8 +90,6 @@ extern ObjectCache objcache[MAX_INIT_SPR];
 extern CharacterExtras *charextra;
 extern int done_es_error;
 extern int our_eip;
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
-extern int scrnwid,scrnhit;
 extern Bitmap *walkareabackup, *walkable_areas_temp;
 extern ScriptObject scrObj[MAX_INIT_SPR];
 extern SpriteCache spriteset;
@@ -214,7 +213,7 @@ Bitmap *fix_bitmap_size(Bitmap *todubl) {
     if ((oldw == newWidth) && (oldh == newHeight))
         return todubl;
 
-    //  Bitmap *tempb=BitmapHelper::CreateBitmap(scrnwid,scrnhit);
+    //  Bitmap *tempb=BitmapHelper::CreateBitmap(GameSize.Width,GameSize.Height);
     //todubl->SetClip(Rect(0,0,oldw-1,oldh-1)); // CHECKME! [IKM] Not sure this is needed here
     Bitmap *tempb=BitmapHelper::CreateBitmap(newWidth, newHeight, todubl->GetColorDepth());
     tempb->SetClip(Rect(0,0,tempb->GetWidth()-1,tempb->GetHeight()-1));
@@ -423,14 +422,14 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
     // load the room from disk
     our_eip=200;
     thisroom.gameId = NO_GAME_ID_IN_ROOM_FILE;
-    load_room(room_filename, &thisroom, (game.default_resolution > 2));
+    load_room(room_filename, &thisroom, (game.IsHiRes()));
 
     if ((thisroom.gameId != NO_GAME_ID_IN_ROOM_FILE) &&
         (thisroom.gameId != game.uniqueid)) {
             quitprintf("!Unable to load '%s'. This room file is assigned to a different game.", room_filename.GetCStr());
     }
 
-    if ((game.default_resolution > 2) && (game.options[OPT_NATIVECOORDINATES] == 0))
+    if ((game.IsHiRes()) && (game.options[OPT_NATIVECOORDINATES] == 0))
     {
         convert_room_coordinates_to_low_res(&thisroom);
     }
@@ -461,14 +460,14 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
     }
 
     if ((thisroom.ebscene[0]->GetColorDepth() == 8) &&
-        (final_col_dep > 8))
+        (GameResolution.ColorDepth > 8))
         select_palette(palette);
 
     for (cc=0;cc<thisroom.num_bscenes;cc++) {
         update_polled_stuff_if_runtime();
 #ifdef USE_15BIT_FIX
         // convert down scenes from 16 to 15-bit if necessary
-        if ((final_col_dep != game.color_depth*8) &&
+        if ((GameResolution.ColorDepth != game.color_depth*8) &&
             (thisroom.ebscene[cc]->GetColorDepth() == game.color_depth * 8)) {
                 Bitmap *oldblock = thisroom.ebscene[cc];
                 thisroom.ebscene[cc] = convert_16_to_15(oldblock);
@@ -488,7 +487,7 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
     }
 
     if ((thisroom.ebscene[0]->GetColorDepth() == 8) &&
-        (final_col_dep > 8))
+        (GameResolution.ColorDepth > 8))
         unselect_palette();
 
     update_polled_stuff_if_runtime();
@@ -501,8 +500,8 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
         if (ds==BitmapHelper::GetScreenBitmap()) abscreen=1;
         else if (ds==virtual_screen) abscreen=2;
         // if this is a 640x480 room and we're in letterbox mode, full-screen it
-        int newScreenHeight = final_scrn_hit;
-        if (multiply_up_coordinate(thisroom.height) < final_scrn_hit) {
+        int newScreenHeight = GameResolution.Height;
+        if (multiply_up_coordinate(thisroom.height) < GameResolution.Height) {
             clear_letterbox_borders();
             newScreenHeight = get_fixed_pixel_size(200);
         }
@@ -511,7 +510,7 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
         {
 			BitmapHelper::SetScreenBitmap( _sub_screen );
         }
-        else if (_sub_screen->GetWidth() != final_scrn_wid)
+        else if (_sub_screen->GetWidth() != GameResolution.Width)
         {
             int subBitmapWidth = _sub_screen->GetWidth();
             delete _sub_screen;
@@ -523,15 +522,14 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
             BitmapHelper::SetScreenBitmap( _old_screen );
         }
 
-		scrnhit = BitmapHelper::GetScreenBitmap()->GetHeight();
-        vesa_yres = scrnhit;
+		GameSize.Height = BitmapHelper::GetScreenBitmap()->GetHeight();
 
-        filter->SetMouseArea(0,0, scrnwid-1, vesa_yres-1);
+        filter->SetMouseArea(0,0, GameSize.Width-1, GameSize.Height-1);
 
-        if (virtual_screen->GetHeight() != scrnhit) {
+        if (virtual_screen->GetHeight() != GameSize.Height) {
             int cdepth=virtual_screen->GetColorDepth();
             delete virtual_screen;
-            virtual_screen=BitmapHelper::CreateBitmap(scrnwid,scrnhit,cdepth);
+            virtual_screen=BitmapHelper::CreateBitmap(GameSize.Width,GameSize.Height,cdepth);
             virtual_screen->Clear();
             gfxDriver->SetMemoryBackBuffer(virtual_screen);
             //      ignore_mouseoff_bitmap = virtual_screen;
@@ -547,7 +545,7 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
         update_polled_stuff_if_runtime();
     }
     // update the script viewport height
-    scsystem.viewport_height = divide_down_coordinate(scrnhit);
+    scsystem.viewport_height = divide_down_coordinate(GameSize.Height);
 
     SetMouseBounds (0,0,0,0);
 
@@ -572,15 +570,15 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
     thisroom.object = fix_bitmap_size(thisroom.object);
     update_polled_stuff_if_runtime();
 
-    set_color_depth(final_col_dep);
+    set_color_depth(GameResolution.ColorDepth);
     // convert backgrounds to current res
     if (thisroom.resolution != get_fixed_pixel_size(1)) {
         for (cc=0;cc<thisroom.num_bscenes;cc++)
             thisroom.ebscene[cc] = fix_bitmap_size(thisroom.ebscene[cc]);
     }
 
-    if ((thisroom.ebscene[0]->GetWidth() < scrnwid) ||
-        (thisroom.ebscene[0]->GetHeight() < scrnhit))
+    if ((thisroom.ebscene[0]->GetWidth() < GameSize.Width) ||
+        (thisroom.ebscene[0]->GetHeight() < GameSize.Height))
     {
         quitprintf("!The background scene for this room is smaller than the game resolution. If you have recently changed " 
             "the game resolution, you will need to re-import the background for this room. (Room: %d, BG Size: %d x %d)",

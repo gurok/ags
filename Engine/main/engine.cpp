@@ -88,9 +88,7 @@ extern int eip_guiobj;
 extern const char *replayTempFile;
 extern SpeechLipSyncLine *splipsync;
 extern int numLipLines, curLipLine, curLipLinePhenome;
-extern int scrnwid,scrnhit;
 extern ScriptSystem scsystem;
-extern int final_scrn_wid,final_scrn_hit,final_col_dep;
 extern IGraphicsDriver *gfxDriver;
 extern Bitmap *virtual_screen;
 extern Bitmap **actsps;
@@ -910,7 +908,7 @@ void show_preload () {
         Bitmap *tsc = BitmapHelper::CreateBitmapCopy(splashsc, screen_bmp->GetColorDepth());
 
 		screen_bmp->Fill(0);
-        screen_bmp->StretchBlt(tsc, RectWH(0, 0, scrnwid,scrnhit), Common::kBitmap_Transparency);
+        screen_bmp->StretchBlt(tsc, RectWH(0, 0, GameSize.Width,GameSize.Height), Common::kBitmap_Transparency);
 
         gfxDriver->ClearDrawList();
 
@@ -959,7 +957,7 @@ void engine_setup_screen()
 {
     Out::FPrint("Set up screen");
 
-    virtual_screen=BitmapHelper::CreateBitmap(scrnwid,scrnhit,final_col_dep);
+    virtual_screen=BitmapHelper::CreateBitmap(GameSize.Width,GameSize.Height,GameResolution.ColorDepth);
     virtual_screen->Clear();
     gfxDriver->SetMemoryBackBuffer(virtual_screen);
     //  ignore_mouseoff_bitmap = virtual_screen;
@@ -1208,13 +1206,13 @@ void engine_init_game_settings()
 
 void engine_init_game_shit()
 {
-    scsystem.width = final_scrn_wid;
-    scsystem.height = final_scrn_hit;
-    scsystem.coldepth = final_col_dep;
+    scsystem.width = GameResolution.Width;
+    scsystem.height = GameResolution.Height;
+    scsystem.coldepth = GameResolution.ColorDepth;
     scsystem.windowed = 0;
     scsystem.vsync = 0;
-    scsystem.viewport_width = divide_down_coordinate(scrnwid);
-    scsystem.viewport_height = divide_down_coordinate(scrnhit);
+    scsystem.viewport_width = divide_down_coordinate(GameSize.Width);
+    scsystem.viewport_height = divide_down_coordinate(GameSize.Height);
     // ScriptSystem::aci_version is only 10 chars long
     strncpy(scsystem.aci_version, EngineVersion.LongString, 10);
     scsystem.os = platform->GetSystemOSID();
@@ -1225,14 +1223,14 @@ void engine_init_game_shit()
 #if defined (DOS_VERSION)
     filter->SetMouseArea(0,0,BASEWIDTH-1,BASEHEIGHT-1);
 #else
-    filter->SetMouseArea(0, 0, scrnwid-1, scrnhit-1);
+    filter->SetMouseArea(0, 0, GameSize.Width-1, GameSize.Height-1);
 #endif
     //  mloadwcursor("mouse.spr");
     //mousecurs[0]=spriteset[2054];
     currentcursor=0;
     our_eip=-4;
     mousey=100;  // stop icon bar popping up
-    init_invalid_regions(final_scrn_hit);
+    init_invalid_regions(GameResolution.Height);
     SetVirtualScreen(virtual_screen);
     our_eip = -41;
 
@@ -1417,29 +1415,10 @@ int initialize_engine(int argc,char*argv[])
 
     engine_init_modxm_player();
 
-    engine_init_screen_settings();
-
-    res = engine_init_gfx_filters();
+    res = graphics_mode_init();
     if (res != RETURN_CONTINUE) {
         return res;
     }
-
-    engine_init_gfx_driver();
-
-    res = engine_init_graphics_mode();
-    if (res != RETURN_CONTINUE) {
-        return res;
-    }
-
-    engine_post_init_gfx_driver();
-
-    engine_prepare_screen();
-
-    platform->PostAllegroInit((usetup.windowed > 0) ? true : false);
-
-    engine_set_gfx_driver_callbacks();
-
-    engine_set_color_conversions();
 
     SetMultitasking(0);
 
