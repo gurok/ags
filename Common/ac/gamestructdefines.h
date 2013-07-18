@@ -53,7 +53,7 @@
 #define OPT_SPEECHTYPE      10
 #define OPT_PIXPERFECT      11
 #define OPT_NOWALKMODE      12
-#define OPT_LETTERBOX       13
+#define LEGACY_OPT_LETTERBOX 13 // obsolete
 #define OPT_FIXEDINVCURSOR  14
 #define OPT_NOLOSEINV       15
 #define OPT_NOSCALEFNT      16

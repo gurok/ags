@@ -15,14 +15,16 @@
 #include <stdlib.h>                   // NULL
 #include "gfx/gfxfilter.h"
 #include "gfx/gfxfilter_allegro.h"
-#include "gfx/gfxfilter_scalingallegro.h"
 #include "gfx/gfxfilter_hq2x.h"
 #include "gfx/gfxfilter_hq3x.h"
 #include "gfx/gfxfilter_d3d.h"
 #include "gfx/gfxfilter_aad3d.h"
 #include "device/mousew32.h"
 
-// Standard do-nothing filter
+namespace AGS
+{
+namespace Engine
+{
 
 const char* GFXFilter::Initialize(int width, int height, int colDepth) {
     return NULL;  // always succeeds
@@ -60,8 +62,17 @@ GFXFilter::~GFXFilter()
 {
 }
 
+} // namespace Engine
+} // namespace AGS
 
-GFXFilter *filter;
+using AGS::Engine::GFXFilter;
+using AGS::Engine::AllegroGFXFilter;
+using AGS::Engine::Hq2xGFXFilter;
+using AGS::Engine::Hq3xGFXFilter;
+using AGS::Engine::D3DGFXFilter;
+using AGS::Engine::AAD3DGFXFilter;
+
+GFXFilter *gfxFilter;
 
 GFXFilter *gfxFilterList[11];
 GFXFilter *gfxFilterListD3D[16];
@@ -69,13 +80,13 @@ GFXFilter *gfxFilterListD3D[16];
 GFXFilter **get_allegro_gfx_filter_list(bool checkingForSetup) {
 
     gfxFilterList[0] = new AllegroGFXFilter(checkingForSetup);
-    gfxFilterList[1] = new ScalingAllegroGFXFilter(2, checkingForSetup);
-    gfxFilterList[2] = new ScalingAllegroGFXFilter(3, checkingForSetup);
-    gfxFilterList[3] = new ScalingAllegroGFXFilter(4, checkingForSetup);
-    gfxFilterList[4] = new ScalingAllegroGFXFilter(5, checkingForSetup);
-    gfxFilterList[5] = new ScalingAllegroGFXFilter(6, checkingForSetup);
-    gfxFilterList[6] = new ScalingAllegroGFXFilter(7, checkingForSetup);
-    gfxFilterList[7] = new ScalingAllegroGFXFilter(8, checkingForSetup);
+    gfxFilterList[1] = new AllegroGFXFilter(2, checkingForSetup);
+    gfxFilterList[2] = new AllegroGFXFilter(3, checkingForSetup);
+    gfxFilterList[3] = new AllegroGFXFilter(4, checkingForSetup);
+    gfxFilterList[4] = new AllegroGFXFilter(5, checkingForSetup);
+    gfxFilterList[5] = new AllegroGFXFilter(6, checkingForSetup);
+    gfxFilterList[6] = new AllegroGFXFilter(7, checkingForSetup);
+    gfxFilterList[7] = new AllegroGFXFilter(8, checkingForSetup);
     gfxFilterList[8] = new Hq2xGFXFilter(checkingForSetup);
     gfxFilterList[9] = new Hq3xGFXFilter(checkingForSetup);
     gfxFilterList[10] = NULL;

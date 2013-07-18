@@ -12,68 +12,81 @@
 //
 //=============================================================================
 
-#include <stdio.h>
 #include "gfx/gfxfilter_scaling.h"
-#include "util/wgt2allg.h"
-#include "device/mousew32.h"
 #include "gfx/gfxfilterhelpers.h"
 
-// Standard scaling filter
+namespace AGS
+{
+namespace Engine
+{
 
-ScalingGFXFilter::ScalingGFXFilter(int multiplier, bool justCheckingForSetup) : GFXFilter() {
-    MULTIPLIER = multiplier;
+ScalingGFXFilter::ScalingGFXFilter(int multiplier, bool justCheckingForSetup) : GFXFilter()
+{
+    BASE_MULTIPLIER = multiplier;
+    MULTIPLIER_X = BASE_MULTIPLIER << kMultiplierShift;
+    MULTIPLIER_Y = BASE_MULTIPLIER << kMultiplierShift;
+    RECT_CORRECTION_X = (MULTIPLIER_X - kMultipliedUnit) >> kMultiplierShift;
+    RECT_CORRECTION_Y = (MULTIPLIER_Y - kMultipliedUnit) >> kMultiplierShift;
     mouseCallbackPtr = NULL;
 
-    sprintf(filterName, "%d" "x nearest-neighbour filter[", multiplier);
-    sprintf(filterID, "StdScale%d", multiplier);
+    filterName.Format("%d" "x nearest-neighbour filter[", multiplier);
+    filterID.Format("StdScale%d", multiplier);
 }
 
-const char* ScalingGFXFilter::Initialize(int width, int height, int colDepth) {
+const char* ScalingGFXFilter::Initialize(int width, int height, int colDepth)
+{
     mouseCallbackPtr = new MouseGetPosCallbackImpl(this);
     msetcallback(mouseCallbackPtr);
     return NULL;
 }
 
-void ScalingGFXFilter::UnInitialize() {
+void ScalingGFXFilter::UnInitialize()
+{
     msetcallback(NULL);
 }
 
-void ScalingGFXFilter::GetRealResolution(int *wid, int *hit) {
-    *wid *= MULTIPLIER;
-    *hit *= MULTIPLIER;
+void ScalingGFXFilter::GetRealResolution(int *wid, int *hit)
+{
+    *wid = (*wid * MULTIPLIER_X) >> kMultiplierShift;
+    *hit = (*hit * MULTIPLIER_Y) >> kMultiplierShift;
 }
 
-void ScalingGFXFilter::SetMouseArea(int x1, int y1, int x2, int y2) {
-    x1 *= MULTIPLIER;
-    y1 *= MULTIPLIER;
-    x2 *= MULTIPLIER;
-    y2 *= MULTIPLIER;
+void ScalingGFXFilter::SetMouseArea(int x1, int y1, int x2, int y2)
+{
+    x1 = ((x1 * MULTIPLIER_X) >> kMultiplierShift) + TargetFrame.Left;
+    y1 = ((y1 * MULTIPLIER_Y) >> kMultiplierShift) + TargetFrame.Top;
+    x2 = ((x2 * MULTIPLIER_X) >> kMultiplierShift) + TargetFrame.Left;
+    y2 = ((y2 * MULTIPLIER_Y) >> kMultiplierShift) + TargetFrame.Top;
     mgraphconfine(x1, y1, x2, y2);
 }
 
-void ScalingGFXFilter::SetMouseLimit(int x1, int y1, int x2, int y2) {
-    // 199 -> 399
-    x1 = x1 * MULTIPLIER + (MULTIPLIER - 1);
-    y1 = y1 * MULTIPLIER + (MULTIPLIER - 1);
-    x2 = x2 * MULTIPLIER + (MULTIPLIER - 1);
-    y2 = y2 * MULTIPLIER + (MULTIPLIER - 1);
+void ScalingGFXFilter::SetMouseLimit(int x1, int y1, int x2, int y2)
+{
+    x1 = ((x1 * MULTIPLIER_X) >> kMultiplierShift) + RECT_CORRECTION_X + TargetFrame.Left;
+    y1 = ((y1 * MULTIPLIER_Y) >> kMultiplierShift) + RECT_CORRECTION_Y + TargetFrame.Top;
+    x2 = ((x2 * MULTIPLIER_X) >> kMultiplierShift) + RECT_CORRECTION_X + TargetFrame.Left;
+    y2 = ((y2 * MULTIPLIER_Y) >> kMultiplierShift) + RECT_CORRECTION_Y + TargetFrame.Top;
     msetcursorlimit(x1, y1, x2, y2);
 }
 
-void ScalingGFXFilter::SetMousePosition(int x, int y) {
-    msetgraphpos(x * MULTIPLIER, y * MULTIPLIER);
+void ScalingGFXFilter::SetMousePosition(int x, int y)
+{
+    msetgraphpos(((x * MULTIPLIER_X) >> kMultiplierShift) + TargetFrame.Left, ((y * MULTIPLIER_Y) >> kMultiplierShift) + TargetFrame.Top);
 }
 
-void ScalingGFXFilter::AdjustPosition(int *x, int *y) {
-    *x /= MULTIPLIER;
-    *y /= MULTIPLIER;
+void ScalingGFXFilter::AdjustPosition(int *x, int *y)
+{
+    *x = ((*x - TargetFrame.Left) << kMultiplierShift) / MULTIPLIER_X;
+    *y = ((*y - TargetFrame.Top)  << kMultiplierShift) / MULTIPLIER_Y;
 }
 
-const char *ScalingGFXFilter::GetVersionBoxText() {
+const char *ScalingGFXFilter::GetVersionBoxText()
+{
     return filterName;
 }
 
-const char *ScalingGFXFilter::GetFilterID() {
+const char *ScalingGFXFilter::GetFilterID()
+{
     return filterID;
 }
 
@@ -85,3 +98,6 @@ ScalingGFXFilter::~ScalingGFXFilter()
         mouseCallbackPtr = NULL;
     }
 }
+
+} // namespace Engine
+} // namespace AGS

@@ -26,7 +26,10 @@
 namespace AGS { namespace Common { class Bitmap; } }
 using namespace AGS; // FIXME later
 
-struct IMouseGetPosCallback;
+struct IMouseGetPosCallback {
+public:
+    virtual void AdjustPosition(int *x, int *y) = 0;
+};
 
 void msetgraphpos(int,int);
 void msetcallback(IMouseGetPosCallback *gpCallback);

@@ -23,6 +23,14 @@
 //namespace Common
 //{
 
+enum Placement
+{
+    kPlaceOffset,
+    kPlaceCenter,
+    kPlaceStretch,
+    kPlaceStretchProportional
+};
+
 struct Line
 {
 	int X1;
@@ -118,6 +126,11 @@ struct Rect
 	{
 		return Bottom - Top + 1;
 	}
+
+    inline Size GetSize() const
+    {
+        return Size(GetWidth(), GetHeight());
+    }
 };
 
 // Helper factory function
@@ -178,7 +191,17 @@ struct Circle
 
 };
 
-//} // namespace Common
-//} // namespace AGS
+namespace AGS
+{
+namespace Common
+{
+
+namespace Math
+{
+    void PlaceInRect(const Rect &place, Rect &item, Placement &placement);
+} // namespace Math
+
+} // namespace Common
+} // namespace AGS
 
 #endif // __AGS_CN_UTIL__GEOMETRY_H

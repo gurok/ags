@@ -102,7 +102,7 @@ void start_game_load_savegame_on_startup()
 
 void start_game() {
     set_cursor_mode(MODE_WALK);
-    filter->SetMousePosition(160,100);
+    gfxFilter->SetMousePosition(160,100);
     newmusic(0);
 
     our_eip = -42;

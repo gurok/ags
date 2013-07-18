@@ -88,7 +88,7 @@ void SetMouseBounds (int x1, int y1, int x2, int y2) {
     play.mboundx2 = x2;
     play.mboundy1 = y1;
     play.mboundy2 = y2;
-    filter->SetMouseLimit(x1,y1,x2,y2);
+    gfxFilter->SetMouseLimit(x1,y1,x2,y2);
 }
 
 // mouse cursor functions:
@@ -275,7 +275,7 @@ void SetMousePosition (int newx, int newy) {
         newy = GetMaxScreenHeight() - 1;
 
     multiply_up_coordinates(&newx, &newy);
-    filter->SetMousePosition(newx, newy);
+    gfxFilter->SetMousePosition(newx, newy);
     RefreshMouse();
 }
 

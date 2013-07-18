@@ -90,11 +90,6 @@ extern "C"
 #define XRAY    1
 #define NORMAL  0
 
-struct IMouseGetPosCallback {
-public:
-    virtual void AdjustPosition(int *x, int *y) = 0;
-};
-
 // archive attributes to search for - al_findfirst breaks with 0
 #define FA_SEARCH -1
 

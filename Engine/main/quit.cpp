@@ -53,7 +53,6 @@ extern int editor_debugging_initialized;
 extern IAGSEditorDebugger *editor_debugger;
 extern int need_to_stop_cd;
 extern Bitmap *_old_screen;
-extern Bitmap *_sub_screen;
 extern int use_cdplayer;
 extern IGraphicsDriver *gfxDriver;
 
@@ -169,14 +168,6 @@ void quit_check_for_error_state(char *&qmsg, char *alertis)
         "(ACI version %s)\n"
         "\nError: ", EngineVersion.LongString.GetCStr());
 }
-
-void quit_destroy_subscreen()
-{
-    // close graphics mode (Win) or return to text mode (DOS)
-    delete _sub_screen;
-	_sub_screen = NULL;
-}
-
 void quit_shutdown_graphics()
 {
     // Release the display mode (and anything dependant on the window)
@@ -296,8 +287,6 @@ void quit(const char *quitmsg) {
 
     shutdown_font_renderer();
     our_eip = 9902;
-
-    quit_destroy_subscreen();
 
     our_eip = 9907;
 

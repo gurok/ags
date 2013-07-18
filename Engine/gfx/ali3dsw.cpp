@@ -143,9 +143,12 @@ public:
 
   virtual const char*GetDriverName() { return "Allegro/DX5"; }
   virtual const char*GetDriverID() { return "DX5"; }
+  virtual DisplayResolution GetResolution();
+  virtual bool IsWindowed();
+  virtual Rect GetDrawingFrame();
   virtual void SetTintMethod(TintMethod method);
-  virtual bool Init(int width, int height, int colourDepth, bool windowed, volatile int *loopTimer);
-  virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, int colourDepth, bool windowed, volatile int *loopTimer);
+  virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
+                    int colourDepth, bool windowed, volatile int *loopTimer);
   virtual int  FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed);
   virtual void SetCallbackForPolling(GFXDRV_CLIENTCALLBACK callback) { _callback = callback; }
   virtual void SetCallbackToDrawScreen(GFXDRV_CLIENTCALLBACK callback) { _drawScreenCallback = callback; }
@@ -187,6 +190,7 @@ public:
 private:
   volatile int* _loopTimer;
   int _screenWidth, _screenHeight;
+  int _virtualWidth, _virtualHeight;
   int _colorDepth;
   bool _windowed;
   bool _autoVsync;
@@ -315,29 +319,26 @@ void ALSoftwareGraphicsDriver::SetTintMethod(TintMethod method)
   // TODO: support new D3D-style tint method
 }
 
-bool ALSoftwareGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, int colourDepth, bool windowed, volatile int *loopTimer)
+bool ALSoftwareGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
+                                    int colourDepth, bool windowed, volatile int *loopTimer)
 {
-  throw Ali3DException("this overload is not supported, you must use the normal Init method");
-}
-
-bool ALSoftwareGraphicsDriver::Init(int width, int height, int colourDepth, bool windowed, volatile int *loopTimer)
-{
-  _screenWidth = width;
-  _screenHeight = height;
+  _screenWidth = realWidth;
+  _screenHeight = realHeight;
+  _virtualWidth = virtualWidth;
+  _virtualHeight = virtualHeight;
   _colorDepth = colourDepth;
   _windowed = windowed;
   _loopTimer = loopTimer;
   int driver = GetAllegroGfxDriverID(windowed);
 
   set_color_depth(colourDepth);
-  int actualInitWid = width, actualInitHit = height;
-  _filter->GetRealResolution(&actualInitWid, &actualInitHit);
+  _filter->GetRealResolution(&_screenWidth, &_screenHeight);
 
   if (_initGfxCallback != NULL)
     _initGfxCallback(NULL);
 
-  if ((IsModeSupported(driver, actualInitWid, actualInitHit, colourDepth)) &&
-      (set_gfx_mode(driver, actualInitWid, actualInitHit, 0, 0) == 0))
+  if ((IsModeSupported(driver, _screenWidth, _screenHeight, colourDepth)) &&
+      (set_gfx_mode(driver, _screenWidth, _screenHeight, 0, 0) == 0))
   {
     // [IKM] 2012-09-07
     // set_gfx_mode is an allegro function that creates screen bitmap;
@@ -345,14 +346,13 @@ bool ALSoftwareGraphicsDriver::Init(int width, int height, int colourDepth, bool
     // ensure global bitmap wraps over existing allegro screen bitmap.
     _allegroScreenWrapper = BitmapHelper::CreateRawBitmapWrapper(screen);
     BitmapHelper::SetScreenBitmap( _allegroScreenWrapper );
-
     BitmapHelper::GetScreenBitmap()->Clear();
-    BitmapHelper::SetScreenBitmap( _filter->ScreenInitialized(BitmapHelper::GetScreenBitmap(), width, height) );
+
+    BitmapHelper::SetScreenBitmap( _filter->ScreenInitialized(BitmapHelper::GetScreenBitmap(), _virtualWidth, _virtualHeight, placement) );
 
     // [IKM] 2012-09-07
     // At this point the wrapper we created is saved by filter for future reference,
     // therefore we should not delete it right away, but only at driver shutdown.
-
     virtualScreen = BitmapHelper::GetScreenBitmap();
 
 #ifdef _WIN32
@@ -374,6 +374,21 @@ bool ALSoftwareGraphicsDriver::Init(int width, int height, int colourDepth, bool
   }
 
   return false;
+}
+
+DisplayResolution ALSoftwareGraphicsDriver::GetResolution()
+{
+    return DisplayResolution(_screenWidth, _screenHeight, _colorDepth);
+}
+
+bool ALSoftwareGraphicsDriver::IsWindowed()
+{
+    return _windowed;
+}
+
+Rect ALSoftwareGraphicsDriver::GetDrawingFrame()
+{
+    return _filter->GetTargetFrame();
 }
 
 void ALSoftwareGraphicsDriver::ClearRectangle(int x1, int y1, int x2, int y2, RGB *colorToUse)
@@ -516,8 +531,8 @@ void ALSoftwareGraphicsDriver::RenderToBackBuffer()
     }
 
     ALSoftwareBitmap* bitmap = drawlist[i];
-    int drawAtX = drawx[i];// + x;
-    int drawAtY = drawy[i];// + y;
+    int drawAtX = drawx[i];
+    int drawAtY = drawy[i];
 
     if ((bitmap->_opaque) && (bitmap->_bmp == virtualScreen))
     { }
@@ -653,7 +668,7 @@ void ALSoftwareGraphicsDriver::highcolor_fade_out(int speed, int targetColourRed
     int clearColor = makecol_depth(BitmapHelper::GetScreenBitmap()->GetColorDepth(),
 				targetColourRed, targetColourGreen, targetColourBlue);
 
-    if ((bmp_orig = BitmapHelper::CreateBitmap(_screenWidth, _screenHeight)))
+    if ((bmp_orig = BitmapHelper::CreateBitmap(_virtualWidth, _virtualHeight)))
     {
         if ((bmp_buff = BitmapHelper::CreateBitmap(bmp_orig->GetWidth(), bmp_orig->GetHeight())))
         {
@@ -751,23 +766,23 @@ void ALSoftwareGraphicsDriver::BoxOutEffect(bool blackingOut, int speed, int del
 {
   if (blackingOut)
   {
-    int yspeed = _screenHeight / (_screenWidth / speed);
+    int yspeed = _virtualHeight / (_virtualWidth / speed);
     int boxwid = speed, boxhit = yspeed;
 
-    while (boxwid < _screenWidth) {
+    while (boxwid < _virtualWidth) {
       boxwid += speed;
       boxhit += yspeed;
       this->Vsync();
-      int vcentre = _screenHeight / 2;
-      this->ClearRectangle(_screenWidth / 2 - boxwid / 2, vcentre - boxhit / 2,
-          _screenWidth / 2 + boxwid / 2, vcentre + boxhit / 2, NULL);
+      int vcentre = _virtualHeight / 2;
+      this->ClearRectangle(_virtualWidth / 2 - boxwid / 2, vcentre - boxhit / 2,
+          _virtualWidth / 2 + boxwid / 2, vcentre + boxhit / 2, NULL);
     
       if (_callback)
         _callback();
 
       platform->Delay(delay);
     }
-    this->ClearRectangle(0, 0, _screenWidth - 1, _screenHeight - 1, NULL);
+    this->ClearRectangle(0, 0, _virtualWidth - 1, _virtualHeight - 1, NULL);
   }
   else
   {
@@ -826,4 +841,3 @@ IGraphicsDriver* GetSoftwareGraphicsDriver(GFXFilter *filter)
 
   return _alsoftware_driver;
 }
-

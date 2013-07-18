@@ -15,50 +15,57 @@
 #include "gfx/bitmap.h"
 #include "gfx/gfxfilter_hq3x.h"
 #include "gfx/hq2x3x.h"
-#include "gfx/gfxfilterdefines.h"
 
-using AGS::Common::Bitmap;
-namespace BitmapHelper = AGS::Common::BitmapHelper;
+namespace AGS
+{
+namespace Engine
+{
 
-const char* Hq3xGFXFilter::Initialize(int width, int height, int colDepth) {
+namespace BitmapHelper = Common::BitmapHelper;
+
+const char* Hq3xGFXFilter::Initialize(int width, int height, int colDepth)
+{
     if (colDepth < 32)
         return "Only supports 32-bit colour games";
 
-    return ScalingGFXFilter::Initialize(width, height, colDepth);
+    return AllegroGFXFilter::Initialize(width, height, colDepth);
 }
 
-
-Bitmap* Hq3xGFXFilter::ScreenInitialized(Bitmap *screen, int fakeWidth, int fakeHeight) {
-    realScreen = screen;
-    realScreenBuffer = BitmapHelper::CreateBitmap(screen->GetWidth(), screen->GetHeight());
-    realScreenSizedBuffer = BitmapHelper::CreateBitmap(screen->GetWidth(), screen->GetHeight(), screen->GetColorDepth());
-    fakeScreen = BitmapHelper::CreateBitmap(fakeWidth, fakeHeight, screen->GetColorDepth());
+Bitmap* Hq3xGFXFilter::ScreenInitialized(Bitmap *screen, int virtualWidth, int virtualHeight, Placement placement)
+{
+    Bitmap *virtual_screen = AllegroGFXFilter::ScreenInitialized(screen, virtualWidth, virtualHeight, placement);
+    hq3xScalingBuffer = BitmapHelper::CreateBitmap(virtualWidth * BASE_MULTIPLIER, virtualHeight * BASE_MULTIPLIER);
     InitLUTs();
-    return fakeScreen;
+    return virtual_screen;
 }
 
-Bitmap *Hq3xGFXFilter::ShutdownAndReturnRealScreen(Bitmap *currentScreen) {
-    delete fakeScreen;
-    delete realScreenBuffer;
-    delete realScreenSizedBuffer;
-    return realScreen;
+Bitmap *Hq3xGFXFilter::ShutdownAndReturnRealScreen(Bitmap *currentScreen)
+{
+    Bitmap *real_screen = AllegroGFXFilter::ShutdownAndReturnRealScreen(currentScreen);
+    delete hq3xScalingBuffer;
+    hq3xScalingBuffer = NULL;
+    return real_screen;
 }
 
-void Hq3xGFXFilter::RenderScreen(Bitmap *toRender, int x, int y) {
-
-    realScreenBuffer->Acquire();
-    hq3x_32(&toRender->GetScanLineForWriting(0)[0], &realScreenBuffer->GetScanLineForWriting(0)[0], toRender->GetWidth(), toRender->GetHeight(), realScreenBuffer->GetWidth() * BYTES_PER_PIXEL(realScreenBuffer->GetColorDepth()));
-    realScreenBuffer->Release();
-
-    realScreen->Blit(realScreenBuffer, 0, 0, x * MULTIPLIER, y * MULTIPLIER, realScreen->GetWidth(), realScreen->GetHeight());
-
-    lastBlitFrom = toRender;
-}
-
-const char *Hq3xGFXFilter::GetVersionBoxText() {
+const char *Hq3xGFXFilter::GetVersionBoxText()
+{
     return "Hq3x filter (32-bit only)[";
 }
 
-const char *Hq3xGFXFilter::GetFilterID() {
+const char *Hq3xGFXFilter::GetFilterID()
+{
     return "Hq3x";
 }
+
+Bitmap *Hq3xGFXFilter::PreRenderPass(Bitmap *toRender, int x, int y)
+{
+    hq3xScalingBuffer->Acquire();
+    hq3x_32(toRender->GetDataForWriting(), hq3xScalingBuffer->GetDataForWriting(),
+        toRender->GetWidth(), toRender->GetHeight(),
+        hq3xScalingBuffer->GetWidth() * BYTES_PER_PIXEL(hq3xScalingBuffer->GetColorDepth()));
+    hq3xScalingBuffer->Release();
+    return hq3xScalingBuffer;
+}
+
+} // namespace Engine
+} // namespace AGS

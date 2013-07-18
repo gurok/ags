@@ -49,7 +49,6 @@ namespace BitmapHelper = AGS::Common::BitmapHelper;
 extern GameSetup usetup;
 extern roomstruct thisroom;
 extern GUIMain*guis;
-extern GFXFilter *filter;
 extern int cur_mode,cur_cursor;
 extern ccInstance *gameinst;
 extern ScriptGUI *scrGui;
@@ -233,7 +232,7 @@ void remove_popup_interface(int ifacenum) {
     ifacepopped=-1; UnPauseGame();
     guis[ifacenum].on=0;
     if (mousey<=guis[ifacenum].popupyp)
-        filter->SetMousePosition(mousex, guis[ifacenum].popupyp+2);
+        gfxFilter->SetMousePosition(mousex, guis[ifacenum].popupyp+2);
     if ((!IsInterfaceEnabled()) && (cur_cursor == cur_mode))
         // Only change the mouse cursor if it hasn't been specifically changed first
         set_mouse_cursor(CURS_WAIT);

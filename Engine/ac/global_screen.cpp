@@ -43,19 +43,11 @@ extern color palette[256];
 extern unsigned int loopcounter;
 
 int current_screen_resolution_multiplier = 1;
-int force_letterbox = 0;
 
 int screen_reset = 0;
 
 int GetMaxScreenHeight () {
-    int maxhit = usetup.base_height;
-    if ((maxhit == 200) || (maxhit == 400))
-    {
-        // uh ... usetup.base_height depends on Native Coordinates setting so be careful
-        if ((usetup.want_letterbox) && (thisroom.height > maxhit)) 
-            maxhit = divide_down_coordinate(multiply_up_coordinate(maxhit) + get_fixed_pixel_size(40));
-    }
-    return maxhit;
+    return usetup.base_height;
 }
 
 void FlipScreen(int amount) {

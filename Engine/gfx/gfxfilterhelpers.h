@@ -11,11 +11,18 @@
 // http://www.opensource.org/licenses/artistic-license-2.0.php
 //
 //=============================================================================
-
 #ifndef __AC_GFXFILTERHELPERS_H
 #define __AC_GFXFILTERHELPERS_H
 
-struct MouseGetPosCallbackImpl : IMouseGetPosCallback {
+#include "device/mousew32.h"
+
+namespace AGS
+{
+namespace Engine
+{
+
+struct MouseGetPosCallbackImpl : IMouseGetPosCallback
+{
 protected:
     ScalingGFXFilter *_callbackFilter;
 
@@ -30,5 +37,8 @@ public:
         _callbackFilter->AdjustPosition(x, y);
     }
 };
+
+} // namespace Engine
+} // namespace AGS
 
 #endif // __AC_GFXFILTERHELPERS_H

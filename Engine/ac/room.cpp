@@ -117,7 +117,6 @@ extern CachedActSpsData* actspswbcache;
 extern color palette[256];
 extern Bitmap *virtual_screen;
 extern Bitmap *_old_screen;
-extern Bitmap *_sub_screen;
 extern int offsetx, offsety;
 extern int mouse_z_was;
 
@@ -493,57 +492,6 @@ void load_new_room(int newnum, CharacterInfo*forchar) {
     update_polled_stuff_if_runtime();
 
     our_eip=202;
-    if (usetup.want_letterbox) {
-        int abscreen=0;
-
-        Bitmap *ds = GetVirtualScreen();
-        if (ds==BitmapHelper::GetScreenBitmap()) abscreen=1;
-        else if (ds==virtual_screen) abscreen=2;
-        // if this is a 640x480 room and we're in letterbox mode, full-screen it
-        int newScreenHeight = GameResolution.Height;
-        if (multiply_up_coordinate(thisroom.height) < GameResolution.Height) {
-            clear_letterbox_borders();
-            newScreenHeight = get_fixed_pixel_size(200);
-        }
-
-        if (newScreenHeight == _sub_screen->GetHeight())
-        {
-			BitmapHelper::SetScreenBitmap( _sub_screen );
-        }
-        else if (_sub_screen->GetWidth() != GameResolution.Width)
-        {
-            int subBitmapWidth = _sub_screen->GetWidth();
-            delete _sub_screen;
-            _sub_screen = BitmapHelper::CreateSubBitmap(_old_screen, RectWH(_old_screen->GetWidth() / 2 - subBitmapWidth / 2, _old_screen->GetHeight() / 2 - newScreenHeight / 2, subBitmapWidth, newScreenHeight));
-            BitmapHelper::SetScreenBitmap( _sub_screen );
-        }
-        else
-        {
-            BitmapHelper::SetScreenBitmap( _old_screen );
-        }
-
-		GameSize.Height = BitmapHelper::GetScreenBitmap()->GetHeight();
-
-        filter->SetMouseArea(0,0, GameSize.Width-1, GameSize.Height-1);
-
-        if (virtual_screen->GetHeight() != GameSize.Height) {
-            int cdepth=virtual_screen->GetColorDepth();
-            delete virtual_screen;
-            virtual_screen=BitmapHelper::CreateBitmap(GameSize.Width,GameSize.Height,cdepth);
-            virtual_screen->Clear();
-            gfxDriver->SetMemoryBackBuffer(virtual_screen);
-            //      ignore_mouseoff_bitmap = virtual_screen;
-        }
-
-        gfxDriver->SetRenderOffset(get_screen_x_adjustment(virtual_screen), get_screen_y_adjustment(virtual_screen));
-
-		if (abscreen==1) //abuf=BitmapHelper::GetScreenBitmap();
-            SetVirtualScreen( BitmapHelper::GetScreenBitmap() );
-        else if (abscreen==2) //abuf=virtual_screen;
-            SetVirtualScreen( virtual_screen );
-
-        update_polled_stuff_if_runtime();
-    }
     // update the script viewport height
     scsystem.viewport_height = divide_down_coordinate(GameSize.Height);
 

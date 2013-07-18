@@ -3737,7 +3737,7 @@ Game^ load_old_game_dta_file(const char *fileName)
 	game->Settings->HandleInvClicksInScript = (thisgame.options[OPT_HANDLEINVCLICKS] != 0);
 	game->Settings->InventoryCursors = !thisgame.options[OPT_FIXEDINVCURSOR];
 	game->Settings->LeftToRightPrecedence = (thisgame.options[OPT_LEFTTORIGHTEVAL] != 0);
-	game->Settings->LetterboxMode = (thisgame.options[OPT_LETTERBOX] != 0);
+	game->Settings->LetterboxMode = (thisgame.options[LEGACY_OPT_LETTERBOX] != 0);
 	game->Settings->MaximumScore = thisgame.totalscore;
 	game->Settings->MouseWheelEnabled = (thisgame.options[OPT_MOUSEWHEEL] != 0);
 	game->Settings->NumberDialogOptions = (thisgame.options[OPT_DIALOGNUMBERED] != 0);
@@ -4863,7 +4863,7 @@ void save_game_to_dta_file(Game^ game, const char *fileName)
 	thisgame.options[OPT_FIXEDINVCURSOR] = !game->Settings->InventoryCursors;
   thisgame.options[OPT_OLDTALKANIMSPD] = game->Settings->LegacySpeechAnimationSpeed;
 	thisgame.options[OPT_LEFTTORIGHTEVAL] = game->Settings->LeftToRightPrecedence;
-	thisgame.options[OPT_LETTERBOX] = game->Settings->LetterboxMode;
+	thisgame.options[LEGACY_OPT_LETTERBOX] = game->Settings->LetterboxMode;
   thisgame.totalscore = game->Settings->MaximumScore;
 	thisgame.options[OPT_MOUSEWHEEL] = game->Settings->MouseWheelEnabled;
 	thisgame.options[OPT_DIALOGNUMBERED] = game->Settings->NumberDialogOptions;

@@ -18,33 +18,12 @@
 #ifndef __AGS_EE_MAIN__GRAPHICSMODE_H
 #define __AGS_EE_MAIN__GRAPHICSMODE_H
 
-#include "util/geometry.h"
-
-struct DisplayResolution
-{
-    int32_t Width;
-    int32_t Height;
-    int32_t ColorDepth;
-
-    DisplayResolution()
-        : Width(0)
-        , Height(0)
-        , ColorDepth(0)
-    {
-    }
-
-    DisplayResolution(int32_t width, int32_t height, int32_t color_depth)
-    {
-        Width = width;
-        Height = height;
-        ColorDepth = color_depth;
-    }
-};
+#include "gfx/graphicsdriver.h"
 
 int graphics_mode_init();
 
 extern Size GameSize;
-extern DisplayResolution GameResolution;
+extern AGS::Engine::DisplayResolution GameResolution;
 
 extern int debug_15bit_mode, debug_24bit_mode;
 extern int convert_16bit_bgr;

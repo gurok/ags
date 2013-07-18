@@ -19,6 +19,8 @@
 #ifndef __AGS_EE_GFX__GRAPHICSDRIVER_H
 #define __AGS_EE_GFX__GRAPHICSDRIVER_H
 
+#include "util/geometry.h"
+
 namespace AGS
 {
 
@@ -56,14 +58,42 @@ typedef void (*GFXDRV_CLIENTCALLBACK)();
 typedef bool (*GFXDRV_CLIENTCALLBACKXY)(int x, int y);
 typedef void (*GFXDRV_CLIENTCALLBACKINITGFX)(void *data);
 
+struct DisplayResolution
+{
+    int32_t Width;
+    int32_t Height;
+    int32_t ColorDepth;
+
+    DisplayResolution()
+        : Width(0)
+        , Height(0)
+        , ColorDepth(0)
+    {
+    }
+
+    DisplayResolution(int32_t width, int32_t height, int32_t color_depth)
+    {
+        Width = width;
+        Height = height;
+        ColorDepth = color_depth;
+    }
+};
+
 class IGraphicsDriver
 {
 public:
   virtual const char*GetDriverName() = 0;
   virtual const char*GetDriverID() = 0;
+  virtual DisplayResolution GetResolution() = 0;
+  virtual bool IsWindowed() = 0;
+  virtual Rect GetDrawingFrame() = 0;
   virtual void SetTintMethod(TintMethod method) = 0;
-  virtual bool Init(int width, int height, int colourDepth, bool windowed, volatile int *loopTimer) = 0;
-  virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, int colourDepth, bool windowed, volatile int *loopTimer) = 0;
+  virtual bool Init(int width, int height, int colourDepth, bool windowed, volatile int *loopTimer)
+  {
+      return Init(width, height, width, height, kPlaceStretch, colourDepth, windowed, loopTimer);
+  }
+  virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
+                    int colourDepth, bool windowed, volatile int *loopTimer) = 0;
   virtual int  FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed) = 0;
   virtual void SetCallbackForPolling(GFXDRV_CLIENTCALLBACK callback) = 0;
   virtual void SetCallbackToDrawScreen(GFXDRV_CLIENTCALLBACK callback) = 0;

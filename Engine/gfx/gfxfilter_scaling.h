@@ -12,39 +12,63 @@
 //
 //=============================================================================
 //
-// AGS specific color blending routines for transparency and tinting effects
+// Base class for graphic filter which provides virtual screen scaling
 //
 //=============================================================================
-
 #ifndef __AC_SCALINGGFXFILTER_H
 #define __AC_SCALINGGFXFILTER_H
 
 #include "gfx/gfxfilter.h"
+#include "util/geometry.h"
+#include "util/string.h"
 
+namespace AGS
+{
+namespace Engine
+{
+
+using Common::String;
 struct MouseGetPosCallbackImpl;
 
-struct ScalingGFXFilter : public GFXFilter {
+class ScalingGFXFilter : public GFXFilter
+{
 protected:
-    int MULTIPLIER;
+    enum
+    {
+        kMultiplierShift    = 10,
+        kMultipliedUnit     = 1 << kMultiplierShift
+    };
+
+    unsigned BASE_MULTIPLIER;
+    unsigned MULTIPLIER_X;
+    unsigned MULTIPLIER_Y;
+    unsigned RECT_CORRECTION_X;
+    unsigned RECT_CORRECTION_Y;
+    Rect TargetFrame;
     MouseGetPosCallbackImpl *mouseCallbackPtr;
 
-    char filterName[100];
-    char filterID[15];
+    String filterName;
+    String filterID;
 
     ScalingGFXFilter(int multiplier, bool justCheckingForSetup);
 
 public:
-
     virtual const char* Initialize(int width, int height, int colDepth);
     virtual void UnInitialize();
     virtual void GetRealResolution(int *wid, int *hit);
+    virtual Rect GetTargetFrame() { return TargetFrame; }
     virtual void SetMouseArea(int x1, int y1, int x2, int y2);
     virtual void SetMouseLimit(int x1, int y1, int x2, int y2);
     virtual void SetMousePosition(int x, int y);
+    // Applies real->virtual coordinate transformation
+    // (i.e. tells which in-game coords correspond to given real screen coords)
     virtual void AdjustPosition(int *x, int *y);
     virtual const char *GetVersionBoxText();
     virtual const char *GetFilterID();
     virtual ~ScalingGFXFilter();
 };
+
+} // namespace Engine
+} // namespace AGS
 
 #endif // __AC_SCALINGGFXFILTER_H

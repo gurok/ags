@@ -43,7 +43,6 @@ extern int psp_audio_cachesize;
 extern char psp_game_file_name[];
 extern int psp_gfx_smooth_sprites;
 extern char psp_translation[];
-extern int force_letterbox;
 extern char replayfile[MAX_PATH];
 extern GameState play;
 
@@ -219,13 +218,6 @@ void read_config_file(char *argv0) {
         usetup.enable_antialiasing = INIreadint ("misc", "antialias", 0);
         usetup.force_hicolor_mode = INIreadint("misc", "notruecolor", 0);
         usetup.enable_side_borders = INIreadint("misc", "sideborders", 0);
-
-#if defined(IOS_VERSION) || defined(PSP_VERSION) || defined(ANDROID_VERSION)
-        // PSP: Letterboxing is not useful on the PSP.
-        force_letterbox = 0;
-#else
-        force_letterbox = INIreadint ("misc", "forceletterbox", 0);
-#endif
 
         if (usetup.enable_antialiasing < 0)
             usetup.enable_antialiasing = 0;

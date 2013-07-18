@@ -151,7 +151,6 @@ Bitmap *virtual_screen;
 bool current_background_is_dirty = false;
 
 Bitmap *_old_screen=NULL;
-Bitmap *_sub_screen=NULL;
 
 int offsetx = 0, offsety = 0;
 
@@ -686,18 +685,10 @@ void mark_current_background_dirty()
 }
 
 int get_screen_y_adjustment(Bitmap *checkFor) {
-
-	if ((BitmapHelper::GetScreenBitmap() == _sub_screen) && (checkFor->GetHeight() < GameResolution.Height))
-        return get_fixed_pixel_size(20);
-
-    return 0;
+	return 0;
 }
 
 int get_screen_x_adjustment(Bitmap *checkFor) {
-
-	if ((BitmapHelper::GetScreenBitmap() == _sub_screen) && (checkFor->GetWidth() < GameResolution.Width))
-        return (GameResolution.Width - checkFor->GetWidth()) / 2;
-
     return 0;
 }
 

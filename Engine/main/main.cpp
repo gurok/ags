@@ -69,7 +69,6 @@ extern GameState play;
 extern int our_eip;
 extern AGSPlatformDriver *platform;
 extern int debug_flags;
-extern int force_letterbox;
 extern int debug_15bit_mode, debug_24bit_mode;
 extern int convert_16bit_bgr;
 extern int display_fps;
@@ -208,8 +207,6 @@ int main_process_cmdline(int argc,char*argv[])
             force_window = 2;
         else if (stricmp(argv[ee],"-hicolor") == 0)
             force_16bit = 1;
-        else if (stricmp(argv[ee],"-letterbox") == 0)
-            force_letterbox = 1;
         else if (stricmp(argv[ee],"-record") == 0)
             play.recording = 1;
         else if (stricmp(argv[ee],"-playback") == 0)

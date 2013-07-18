@@ -12,23 +12,35 @@
 //
 //=============================================================================
 
-#include <stdio.h>
 #include "gfx/gfxfilter_d3d.h"
 #ifdef WINDOWS_VERSION
 #include <d3d9.h>
 #endif
+#include "util/geometry.h"
 
-// Standard 3D-accelerated filter
+namespace AGS
+{
+namespace Engine
+{
 
 D3DGFXFilter::D3DGFXFilter(bool justCheckingForSetup) : ScalingGFXFilter(1, justCheckingForSetup) { 
-    sprintf(filterName, "");
-    sprintf(filterID, "None");
+    filterName = "";
+    filterID = "None";
 }
 
 D3DGFXFilter::D3DGFXFilter(int multiplier, bool justCheckingForSetup) : ScalingGFXFilter(multiplier, justCheckingForSetup)
 {
-    sprintf(filterName, "%d" "x nearest-neighbour filter[", multiplier);
-    sprintf(filterID, "StdScale%d", multiplier);
+}
+
+void D3DGFXFilter::InitTargetFrame(int realWidth, int realHeight, int virtualWidth, int virtualHeight, Placement placement)
+{
+    Rect screen_frame = RectWH(0, 0, realWidth, realHeight);
+    TargetFrame = RectWH(0, 0, virtualWidth * BASE_MULTIPLIER, virtualHeight * BASE_MULTIPLIER);
+    AGS::Common::Math::PlaceInRect(screen_frame, TargetFrame, placement);
+    MULTIPLIER_X = (TargetFrame.GetWidth() << kMultiplierShift) / virtualWidth;
+    MULTIPLIER_Y = (TargetFrame.GetHeight() << kMultiplierShift) / virtualHeight;
+    RECT_CORRECTION_X = MULTIPLIER_X > kMultipliedUnit ? ((MULTIPLIER_X - kMultipliedUnit) >> kMultiplierShift) : 0;
+    RECT_CORRECTION_Y = MULTIPLIER_Y > kMultipliedUnit ? ((MULTIPLIER_Y - kMultipliedUnit) >> kMultiplierShift) : 0;
 }
 
 void D3DGFXFilter::SetSamplerStateForStandardSprite(void *direct3ddevice9)
@@ -44,3 +56,6 @@ bool D3DGFXFilter::NeedToColourEdgeLines()
 {
     return false;
 }
+
+} // namespace Engine
+} // namespace AGS

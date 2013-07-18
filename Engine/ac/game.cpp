@@ -2262,7 +2262,7 @@ int restore_game_data (Stream *in, const char *nametouse) {
     // it with SetMusicVolume)
     thisroom.options[ST_VOLUME] = newRoomVol;
 
-    filter->SetMouseLimit(oldx1,oldy1,oldx2,oldy2);
+    gfxFilter->SetMouseLimit(oldx1,oldy1,oldx2,oldy2);
 
     set_cursor_mode(sg_cur_mode);
     set_mouse_cursor(sg_cur_cursor);

@@ -22,6 +22,7 @@
 
 using AGS::Common::Stream;
 using namespace AGS; // FIXME later
+using AGS::Engine::GFXFilter;
 
 #define AL_ID(a,b,c,d)     (((a)<<24) | ((b)<<16) | ((c)<<8) | (d))
 

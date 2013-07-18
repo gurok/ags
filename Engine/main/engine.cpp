@@ -1221,9 +1221,9 @@ void engine_init_game_shit()
         scsystem.windowed = 1;
 
 #if defined (DOS_VERSION)
-    filter->SetMouseArea(0,0,BASEWIDTH-1,BASEHEIGHT-1);
+    gfxFilter->SetMouseArea(0,0,BASEWIDTH-1,BASEHEIGHT-1);
 #else
-    filter->SetMouseArea(0, 0, GameSize.Width-1, GameSize.Height-1);
+    gfxFilter->SetMouseArea(0, 0, GameSize.Width-1, GameSize.Height-1);
 #endif
     //  mloadwcursor("mouse.spr");
     //mousecurs[0]=spriteset[2054];

@@ -12,36 +12,53 @@
 //
 //=============================================================================
 //
-// AGS specific color blending routines for transparency and tinting effects
+// Basic software scaling filter
 //
 //=============================================================================
-
 #ifndef __AC_ALLEGROGFXFILTER_H
 #define __AC_ALLEGROGFXFILTER_H
 
 #include "gfx/gfxfilter_scaling.h"
 
-namespace AGS { namespace Common { class Bitmap; }}
-using namespace AGS; // FIXME later
+namespace AGS
+{
 
-struct AllegroGFXFilter : ScalingGFXFilter {
+namespace Common { class Bitmap; }
+
+namespace Engine
+{
+
+using Common::Bitmap;
+
+class AllegroGFXFilter : public ScalingGFXFilter
+{
 protected:
-    Common::Bitmap *realScreen;
-    int lastBlitX;
-    int lastBlitY;
+    // pointer to real screen bitmap
+    Bitmap *realScreen;
+    // bitmap the size of game resolution
+    Bitmap *virtualScreen;
+    // buffer for making a copy of video memory before stretching
+    // for screen capture
+    Bitmap *realScreenSizedBuffer;
+    Bitmap *lastBlitFrom;
 
 public:
-
     AllegroGFXFilter(bool justCheckingForSetup);
     AllegroGFXFilter(int multiplier, bool justCheckingForSetup);
 
-    virtual Common::Bitmap *ScreenInitialized(Common::Bitmap *screen, int fakeWidth, int fakeHeight);
-    virtual Common::Bitmap *ShutdownAndReturnRealScreen(Common::Bitmap *currentScreen);
+    virtual Bitmap *ScreenInitialized(Common::Bitmap *screen, int virtualWidth, int virtualHeight, Placement placement);
+    virtual Bitmap *ShutdownAndReturnRealScreen(Common::Bitmap *currentScreen);
     virtual void RenderScreen(Common::Bitmap *toRender, int x, int y);
     virtual void RenderScreenFlipped(Common::Bitmap *toRender, int x, int y, int flipType);
     virtual void ClearRect(int x1, int y1, int x2, int y2, int color);
     virtual void GetCopyOfScreenIntoBitmap(Common::Bitmap *copyBitmap);
     virtual void GetCopyOfScreenIntoBitmap(Common::Bitmap *copyBitmap, bool copyWithYOffset);
+
+protected:
+    virtual Bitmap *PreRenderPass(Bitmap *toRender, int x, int y);
 };
+
+} // namespace Engine
+} // namespace AGS
 
 #endif // __AC_ALLEGROGFXFILTER_H

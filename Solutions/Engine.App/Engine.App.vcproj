@@ -757,10 +757,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\Engine\gfx\gfxfilter_scalingallegro.cpp"
-					>
-				</File>
-				<File
 					RelativePath="..\..\Engine\gfx\gfxfilterdefines.h"
 					>
 				</File>
@@ -1688,10 +1684,6 @@
 				</File>
 				<File
 					RelativePath="..\..\Engine\gfx\gfxfilter_scaling.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\Engine\gfx\gfxfilter_scalingallegro.h"
 					>
 				</File>
 				<File

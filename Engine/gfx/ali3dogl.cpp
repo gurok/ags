@@ -398,9 +398,12 @@ class OGLGraphicsDriver : public IGraphicsDriver
 public:
   virtual const char*GetDriverName() { return "OpenGL"; }
   virtual const char*GetDriverID() { return "OGL"; }
+  virtual DisplayResolution GetResolution();
+  virtual bool IsWindowed();
+  virtual Rect GetDrawingFrame();
   virtual void SetTintMethod(TintMethod method);
-  virtual bool Init(int width, int height, int colourDepth, bool windowed, volatile int *loopTimer);
-  virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, int colourDepth, bool windowed, volatile int *loopTimer);
+  virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
+                    int colourDepth, bool windowed, volatile int *loopTimer);
   virtual int  FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed);
   virtual void SetCallbackForPolling(GFXDRV_CLIENTCALLBACK callback) { _pollingCallback = callback; }
   virtual void SetCallbackToDrawScreen(GFXDRV_CLIENTCALLBACK callback) { _drawScreenCallback = callback; }
@@ -822,12 +825,8 @@ void OGLGraphicsDriver::InitOpenGl()
   create_backbuffer_arrays();
 }
 
-bool OGLGraphicsDriver::Init(int width, int height, int colourDepth, bool windowed, volatile int *loopTimer) 
-{
-  return this->Init(width, height, width, height, colourDepth, windowed, loopTimer);
-}
-
-bool OGLGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, int colourDepth, bool windowed, volatile int *loopTimer)
+bool OGLGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
+                             int colourDepth, bool windowed, volatile int *loopTimer)
 {
 #if defined(ANDROID_VERSION)
   android_create_screen(realWidth, realHeight, colourDepth);
@@ -947,6 +946,21 @@ bool OGLGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth,
   BitmapHelper::SetScreenBitmap( ConvertBitmapToSupportedColourDepth(BitmapHelper::CreateBitmap(virtualWidth, virtualHeight, colourDepth)) );
 
   return true;
+}
+
+DisplayResolution OGLGraphicsDriver::GetResolution()
+{
+    return DisplayResolution(_newmode_screen_width, _newmode_screen_height, _newmode_depth);
+}
+
+bool OGLGraphicsDriver::IsWindowed()
+{
+    return _newmode_windowed;
+}
+
+Rect OGLGraphicsDriver::GetDrawingFrame()
+{
+    return _filter->GetTargetFrame();
 }
 
 void OGLGraphicsDriver::UnInit() 

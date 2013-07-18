@@ -743,7 +743,7 @@ int IAGSEngine::DecrementManagedObjectRefCount(const char *address) {
 }
 
 void IAGSEngine::SetMousePosition(int32 x, int32 y) {
-    filter->SetMousePosition(x, y);
+    gfxFilter->SetMousePosition(x, y);
     RefreshMouse();
 }
 

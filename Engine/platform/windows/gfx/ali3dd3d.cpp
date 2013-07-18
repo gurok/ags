@@ -238,9 +238,12 @@ class D3DGraphicsDriver : public IGraphicsDriver
 public:
   virtual const char*GetDriverName() { return "Direct3D 9"; }
   virtual const char*GetDriverID() { return "D3D9"; }
+  virtual DisplayResolution GetResolution();
+  virtual bool IsWindowed();
+  virtual Rect GetDrawingFrame();
   virtual void SetTintMethod(TintMethod method);
-  virtual bool Init(int width, int height, int colourDepth, bool windowed, volatile int *loopTimer);
-  virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, int colourDepth, bool windowed, volatile int *loopTimer);
+  virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
+                    int colourDepth, bool windowed, volatile int *loopTimer);
   virtual int  FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed);
   virtual void SetCallbackForPolling(GFXDRV_CLIENTCALLBACK callback) { _pollingCallback = callback; }
   virtual void SetCallbackToDrawScreen(GFXDRV_CLIENTCALLBACK callback) { _drawScreenCallback = callback; }
@@ -298,6 +301,7 @@ private:
   int _newmode_screen_width, _newmode_screen_height;
   int _newmode_depth, _newmode_refresh;
   bool _newmode_windowed;
+  Rect TargetFrame;
   int _global_x_offset, _global_y_offset;
   UINT availableVideoMemory;
   GFXDRV_CLIENTCALLBACK _pollingCallback;
@@ -310,7 +314,8 @@ private:
   IDirect3DPixelShader9* pixelShader;
   bool _smoothScaling;
   bool _legacyPixelShader;
-  float _pixelRenderOffset;
+  float _pixelRenderXOffset;
+  float _pixelRenderYOffset;
   volatile int *_loopTimer;
   Bitmap *_screenTintLayer;
   D3DBitmap* _screenTintLayerDDB;
@@ -873,8 +878,8 @@ void D3DGraphicsDriver::InitializeD3DState()
   OutputDebugString("AGS -- InitializeD3DState()");
 
   D3DMATRIX matOrtho = {
-    (2.0 / (float)_newmode_width), 0.0, 0.0, 0.0,
-    0.0, (2.0 / (float)_newmode_height), 0.0, 0.0,
+   (2.0 / (float)_newmode_screen_width), 0.0, 0.0, 0.0,
+    0.0, (2.0 / (float)_newmode_screen_height), 0.0, 0.0,
     0.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 1.0
   };
@@ -950,7 +955,22 @@ void D3DGraphicsDriver::InitializeD3DState()
   direct3ddevice->LightEnable(0, TRUE);
 
   // See "Directly Mapping Texels to Pixels" MSDN article for why this is necessary
-  _pixelRenderOffset = ((float)_newmode_width / (float)_newmode_screen_width) / 2.0f;
+  _pixelRenderXOffset = ((float)_newmode_width / (float)_newmode_screen_width) / 2.0f;
+  _pixelRenderYOffset = ((float)_newmode_height / (float)_newmode_screen_height) / 2.0f;
+
+  // Clear the screen before setting a viewport.
+  ClearRectangle(0, 0, _newmode_screen_width, _newmode_screen_height, 0);
+
+  // Set Viewport.
+  D3DVIEWPORT9 d3dViewport;
+  ZeroMemory(&d3dViewport, sizeof(D3DVIEWPORT9));
+  d3dViewport.X = TargetFrame.Left;
+  d3dViewport.Y = TargetFrame.Top;
+  d3dViewport.Width = TargetFrame.GetWidth();
+  d3dViewport.Height = TargetFrame.GetHeight();
+  d3dViewport.MinZ = 0.0f;
+  d3dViewport.MaxZ = 1.0f;
+  direct3ddevice->SetViewport(&d3dViewport);
 }
 
 void D3DGraphicsDriver::SetRenderOffset(int x, int y)
@@ -964,12 +984,8 @@ void D3DGraphicsDriver::SetTintMethod(TintMethod method)
   _legacyPixelShader = (method == TintReColourise);
 }
 
-bool D3DGraphicsDriver::Init(int width, int height, int colourDepth, bool windowed, volatile int *loopTimer) 
-{
-  return this->Init(width, height, width, height, colourDepth, windowed, loopTimer);
-}
-
-bool D3DGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, int colourDepth, bool windowed, volatile int *loopTimer)
+bool D3DGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
+                             int colourDepth, bool windowed, volatile int *loopTimer)
 {
   if (colourDepth < 15)
   {
@@ -987,6 +1003,8 @@ bool D3DGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth,
   _loopTimer = loopTimer;
 
   _filter->GetRealResolution(&_newmode_screen_width, &_newmode_screen_height);
+  _filter->InitTargetFrame(_newmode_screen_width, _newmode_screen_height, _newmode_width, _newmode_height, placement);
+  TargetFrame = _filter->GetTargetFrame();
 
   try
   {
@@ -1004,6 +1022,21 @@ bool D3DGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth,
 	  ConvertBitmapToSupportedColourDepth(BitmapHelper::CreateBitmap(virtualWidth, virtualHeight, colourDepth))
 	  );
   return true;
+}
+
+DisplayResolution D3DGraphicsDriver::GetResolution()
+{
+    return DisplayResolution(_newmode_screen_width, _newmode_screen_height, _newmode_depth);
+}
+
+bool D3DGraphicsDriver::IsWindowed()
+{
+    return _newmode_windowed;
+}
+
+Rect D3DGraphicsDriver::GetDrawingFrame()
+{
+    return _filter->GetTargetFrame();
 }
 
 void D3DGraphicsDriver::UnInit() 
@@ -1086,17 +1119,21 @@ void D3DGraphicsDriver::GetCopyOfScreenIntoBitmap(Bitmap *destination)
     if (_pollingCallback)
       _pollingCallback();
 
-    WINDOWINFO windowInfo;
-    RECT *areaToCapture = NULL;
-
+    RECT areaToCapture;
+    ZeroMemory(&areaToCapture, sizeof(RECT));
     if (_newmode_windowed)
     {
       // Stupidly, D3D creates a screenshot of the entire
       // desktop, so we have to manually extract the
       // bit with our game's window on it
+      WINDOWINFO windowInfo;
       GetWindowInfo(win_get_window(), &windowInfo);
-      areaToCapture = &windowInfo.rcClient;
+      areaToCapture = windowInfo.rcClient;
     }
+    areaToCapture.left += TargetFrame.Left;
+    areaToCapture.right = areaToCapture.left + TargetFrame.GetWidth();
+    areaToCapture.top += TargetFrame.Top;
+    areaToCapture.bottom = areaToCapture.top + TargetFrame.GetHeight();
 
     Bitmap *finalImage = NULL;
 
@@ -1107,19 +1144,14 @@ void D3DGraphicsDriver::GetCopyOfScreenIntoBitmap(Bitmap *destination)
     }
 
     Bitmap *retrieveInto = destination;
-
-    if ((_newmode_width != _newmode_screen_width) ||
-        (_newmode_height != _newmode_screen_height))
+    if ((_newmode_width != TargetFrame.GetWidth()) ||
+        (_newmode_height != TargetFrame.GetHeight()))
     {
-      // in letterbox mode the screen is 640x480 but destination might only be 320x200
-      // therefore calculate the size like this
-      retrieveInto = BitmapHelper::CreateBitmap(destination->GetWidth() * _newmode_screen_width / _newmode_width, 
-                                          destination->GetHeight() * _newmode_screen_height / _newmode_height,
-										  32);
+        retrieveInto = BitmapHelper::CreateBitmap(TargetFrame.GetWidth(), TargetFrame.GetHeight(), 32);
     }
 
     D3DLOCKED_RECT lockedRect;
-    if (surface->LockRect(&lockedRect, areaToCapture, D3DLOCK_READONLY) != D3D_OK)
+    if (surface->LockRect(&lockedRect, &areaToCapture, D3DLOCK_READONLY) != D3D_OK)
     {
       throw Ali3DException("IDirect3DSurface9::LockRect failed");
     }
@@ -1128,17 +1160,7 @@ void D3DGraphicsDriver::GetCopyOfScreenIntoBitmap(Bitmap *destination)
     long *sourcePtr;
     long *destPtr;
     int xOffset = 0;
-    if (destination->GetHeight() < _newmode_height)
-    {
-      // nasty hack for letterbox
-      surfaceData += (lockedRect.Pitch * ((_newmode_height - destination->GetHeight()) / 2)) * _newmode_screen_height / _newmode_height;
-    }
-    if (destination->GetWidth() < _newmode_width)
-    {
-      // hack for side borders
-      xOffset += ((_newmode_width - destination->GetWidth()) / 2) * _newmode_screen_width / _newmode_width;
-    }
-
+    
     for (int y = 0; y < retrieveInto->GetHeight(); y++)
     {
       sourcePtr = (long*)surfaceData;
@@ -1316,17 +1338,19 @@ void D3DGraphicsDriver::_renderSprite(SpriteDrawListEntry *drawListEntry, bool g
 
   float width = bmpToDraw->GetWidthToRender();
   float height = bmpToDraw->GetHeightToRender();
-  float xProportion = (float)width / (float)bmpToDraw->_width;
-  float yProportion = (float)height / (float)bmpToDraw->_height;
+  float xProportion = width / (float)bmpToDraw->_width;
+  float yProportion = height / (float)bmpToDraw->_height;
+  float xFrameProportion = (float)_newmode_screen_width / _newmode_width;
+  float yFrameProportion = (float)_newmode_screen_height / _newmode_height;
 
-  bool flipLeftToRight = globalLeftRightFlip ^ bmpToDraw->_flipped;
-  int drawAtX = drawListEntry->x + _global_x_offset;
-  int drawAtY = drawListEntry->y + _global_y_offset;
+  bool  flipLeftToRight = globalLeftRightFlip ^ bmpToDraw->_flipped;
+  float drawAtX = (drawListEntry->x + _global_x_offset) * xFrameProportion;
+  float drawAtY = (drawListEntry->y + _global_y_offset) * yFrameProportion;
 
   for (int ti = 0; ti < bmpToDraw->_numTiles; ti++)
   {
-    width = bmpToDraw->_tiles[ti].width * xProportion;
-    height = bmpToDraw->_tiles[ti].height * yProportion;
+    width = bmpToDraw->_tiles[ti].width * xProportion * xFrameProportion;
+    height = bmpToDraw->_tiles[ti].height * yProportion * yFrameProportion;
     float xOffs;
     float yOffs = bmpToDraw->_tiles[ti].y * yProportion;
     if (flipLeftToRight != globalLeftRightFlip)
@@ -1337,21 +1361,20 @@ void D3DGraphicsDriver::_renderSprite(SpriteDrawListEntry *drawListEntry, bool g
     {
       xOffs = bmpToDraw->_tiles[ti].x * xProportion;
     }
-    int thisX = drawAtX + xOffs;
-    int thisY = drawAtY + yOffs;
+    float thisX = drawAtX + xOffs;
+    float thisY = drawAtY + yOffs;
 
     if (globalLeftRightFlip)
     {
-      thisX = (_newmode_width - thisX) - width;
+      thisX = (_newmode_screen_width - thisX) - width;
     }
     if (globalTopBottomFlip) 
     {
-      thisY = (_newmode_height - thisY) - height;
+      thisY = (_newmode_screen_height - thisY) - height;
     }
 
-    thisX = (-(_newmode_width / 2)) + thisX;
-    thisY = (_newmode_height / 2) - thisY;
-
+    thisX = (-(_newmode_screen_width / 2)) + thisX;
+    thisY = (_newmode_screen_height / 2) - thisY;
 
     //Setup translation and scaling matrices
     float widthToScale = (float)width;
@@ -1370,7 +1393,7 @@ void D3DGraphicsDriver::_renderSprite(SpriteDrawListEntry *drawListEntry, bool g
       thisY -= height;
     }
 
-    make_translated_scaling_matrix(&matTransform, (float)thisX - _pixelRenderOffset, (float)thisY + _pixelRenderOffset, widthToScale, heightToScale);
+    make_translated_scaling_matrix(&matTransform, (float)thisX - _pixelRenderXOffset, (float)thisY + _pixelRenderYOffset, widthToScale, heightToScale);
 
     if ((_smoothScaling) && (bmpToDraw->_stretchToHeight > 0) &&
         ((bmpToDraw->_stretchToHeight != bmpToDraw->_height) ||

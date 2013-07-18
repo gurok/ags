@@ -12,22 +12,28 @@
 //
 //=============================================================================
 //
-// AGS specific color blending routines for transparency and tinting effects
+// Anti-aliased D3D filter
 //
 //=============================================================================
-
 #ifndef __AC_AAD3DGFXFILTER_H
 #define __AC_AAD3DGFXFILTER_H
 
 #include "gfx/gfxfilter_d3d.h"
 
-// Anti-aliased D3D filter
+namespace AGS
+{
+namespace Engine
+{
 
-struct AAD3DGFXFilter : D3DGFXFilter {
-
+class AAD3DGFXFilter : public D3DGFXFilter
+{
+public:
     AAD3DGFXFilter(int multiplier, bool justCheckingForSetup);
     virtual void SetSamplerStateForStandardSprite(void *direct3ddevice9);
     virtual bool NeedToColourEdgeLines();
 };
+
+} // namespace Engine
+} // namespace AGS
 
 #endif // __AC_AAD3DGFXFILTER_H
