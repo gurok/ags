@@ -404,7 +404,7 @@ public:
   virtual void SetTintMethod(TintMethod method);
   virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
                     int colourDepth, bool windowed, volatile int *loopTimer);
-  virtual int  FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed);
+  virtual IGfxModeList *GetSupportedModeList(int color_depth);
   virtual void SetCallbackForPolling(GFXDRV_CLIENTCALLBACK callback) { _pollingCallback = callback; }
   virtual void SetCallbackToDrawScreen(GFXDRV_CLIENTCALLBACK callback) { _drawScreenCallback = callback; }
   virtual void SetCallbackOnInit(GFXDRV_CLIENTCALLBACKINITGFX callback) { _initGfxCallback = callback; }
@@ -578,11 +578,6 @@ void OGLGraphicsDriver::Vsync()
 bool OGLGraphicsDriver::IsModeSupported(int width, int height, int colDepth)
 {
   return true;
-}
-
-int OGLGraphicsDriver::FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed)
-{
-  return idealWidth;
 }
 
 bool OGLGraphicsDriver::SupportsGammaControl() 
@@ -946,6 +941,12 @@ bool OGLGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth,
   BitmapHelper::SetScreenBitmap( ConvertBitmapToSupportedColourDepth(BitmapHelper::CreateBitmap(virtualWidth, virtualHeight, colourDepth)) );
 
   return true;
+}
+
+IGfxModeList *OGLGraphicsDriver::GetSupportedModeList(int color_depth)
+{
+    // TODO!!
+    return NULL;
 }
 
 DisplayResolution OGLGraphicsDriver::GetResolution()

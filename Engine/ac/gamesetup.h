@@ -15,6 +15,7 @@
 #ifndef __AC_GAMESETUP_H
 #define __AC_GAMESETUP_H
 
+#include "main/graphics_mode.h"
 #include "util/string.h"
 
 // game setup, read in from CFG file
@@ -36,6 +37,8 @@ struct GameSetup {
     char *translation;
     char *gfxFilterID;
     char *gfxDriverID;
+    Size  screen_size;
+    RenderFramePlacement drawing_place;
     GameSetup();
 };
 

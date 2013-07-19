@@ -263,6 +263,20 @@ void read_config_file(char *argv0) {
         usetup.gfxDriverID = "DX5";
 #endif
 
+        usetup.screen_size.Width = INIreadint("misc", "screenwidth", 0);
+        usetup.screen_size.Height = INIreadint("misc", "screenheight", 0);
+        usetup.drawing_place = (RenderFramePlacement)INIreadint("misc", "renderstyle", kRenderPlaceResizeWindow);
+        // FIXME!!!!!!!!!
+        // [IKM] temporary dirty hack until INI file reader is fixed;
+        // I don't fix it right now, because that will require careful testing of all
+        // read properties behavior, which is a separate task
+        if (usetup.screen_size.Width < 0)
+            usetup.screen_size.Width = 0;
+        if (usetup.screen_size.Height < 0)
+            usetup.screen_size.Height = 0;
+        if (usetup.drawing_place < 0)
+            usetup.drawing_place = kRenderPlaceResizeWindow;
+
         usetup.translation = INIreaditem ("language", "translation");
 
 #if !defined(IOS_VERSION) && !defined(PSP_VERSION) && !defined(ANDROID_VERSION)

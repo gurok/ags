@@ -226,6 +226,47 @@ public:
   }
 };
 
+static D3DFORMAT color_depth_to_d3d_format(int color_depth, bool wantAlpha);
+static int d3d_format_to_color_depth(D3DFORMAT format, bool secondary);
+
+class D3DGfxModeList : public IGfxModeList
+{
+public:
+    D3DGfxModeList(IDirect3D9 *direct3d, D3DFORMAT d3dformat)
+        : _direct3d(direct3d)
+        , _pixelFormat(d3dformat)
+    {
+        _modeCount = _direct3d ? _direct3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, _pixelFormat) : 0;
+    }
+  
+    virtual int GetModeCount()
+    {
+        return _modeCount;
+    }
+
+    virtual bool GetMode(int index, DisplayResolution &resolution)
+    {
+        if (_direct3d && index >= 0 && index < _modeCount)
+        {
+            D3DDISPLAYMODE displayMode;
+            if (SUCCEEDED(_direct3d->EnumAdapterModes(D3DADAPTER_DEFAULT, _pixelFormat, index, &displayMode)))
+            {
+                resolution.Width = displayMode.Width;
+                resolution.Height = displayMode.Height;
+                resolution.ColorDepth = d3d_format_to_color_depth(displayMode.Format, false);
+                return true;
+            }
+        }
+        return false;
+    }
+
+private:
+    IDirect3D9 *_direct3d;
+    D3DFORMAT   _pixelFormat;
+    int         _modeCount;
+};
+
+
 struct SpriteDrawListEntry
 {
   D3DBitmap *bitmap;
@@ -244,7 +285,7 @@ public:
   virtual void SetTintMethod(TintMethod method);
   virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
                     int colourDepth, bool windowed, volatile int *loopTimer);
-  virtual int  FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed);
+  virtual IGfxModeList *GetSupportedModeList(int color_depth);
   virtual void SetCallbackForPolling(GFXDRV_CLIENTCALLBACK callback) { _pollingCallback = callback; }
   virtual void SetCallbackToDrawScreen(GFXDRV_CLIENTCALLBACK callback) { _drawScreenCallback = callback; }
   virtual void SetCallbackOnInit(GFXDRV_CLIENTCALLBACKINITGFX callback) { _initGfxCallback = callback; }
@@ -554,6 +595,34 @@ static D3DFORMAT color_depth_to_d3d_format(int color_depth, bool wantAlpha)
   return D3DFMT_UNKNOWN;
 }
 
+/* d3d_format_to_color_depth:
+ *  Convert a D3D tag to colour depth
+ *
+ * TODO: this is currently an inversion of color_depth_to_d3d_format;
+ * check later if more formats should be handled
+ */
+static int d3d_format_to_color_depth(D3DFORMAT format, bool secondary)
+{
+  switch (format)
+  {
+  case D3DFMT_P8:
+    return 8;
+  case D3DFMT_A1R5G5B5:
+    return secondary ? 15 : 16;
+  case D3DFMT_X1R5G5B5:
+    return secondary ? 15 : 16;
+  case D3DFMT_R5G6B5:
+    return 16;
+  case D3DFMT_R8G8B8:
+    return secondary ? 24 : 32;
+  case D3DFMT_A8R8G8B8:
+    return 32;  
+  case D3DFMT_X8R8G8B8:
+    return 32;
+  }
+  return 0;
+}
+
 bool D3DGraphicsDriver::IsModeSupported(int width, int height, int colDepth)
 {
   if (_newmode_windowed)
@@ -581,47 +650,6 @@ bool D3DGraphicsDriver::IsModeSupported(int width, int height, int colDepth)
 
   strcpy(allegro_error, "The requested adapter mode is not supported");
   return false;
-}
-
-int D3DGraphicsDriver::FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed)
-{
-  if (!EnsureDirect3D9IsCreated())
-    return 0;
-
-  int unfilteredWidth = idealWidth;
-  _filter->GetRealResolution(&idealWidth, &height);
-  int filterFactor = idealWidth / unfilteredWidth;
-
-  D3DFORMAT pixelFormat = color_depth_to_d3d_format(colDepth, false);
-  D3DDISPLAYMODE displayMode;
-
-  int nearestWidthFound = 0;
-  int modeCount = direct3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, pixelFormat);
-  for (int i = 0; i < modeCount; i++)
-  {
-    if (FAILED(direct3d->EnumAdapterModes(D3DADAPTER_DEFAULT, pixelFormat, i, &displayMode)))
-    {
-      strcpy(allegro_error, "IDirect3D9::EnumAdapterModes failed");
-      return 0;
-    }
-
-    if (displayMode.Height == height)
-    {
-      if (displayMode.Width == idealWidth)
-        return idealWidth / filterFactor;
-
-      if (abs(displayMode.Width - idealWidth) <
-          abs(nearestWidthFound - idealWidth))
-      {
-        nearestWidthFound = displayMode.Width;
-      }
-    }
-  }
-
-  if (abs(nearestWidthFound - idealWidth) <= widthRangeAllowed * filterFactor)
-    return nearestWidthFound / filterFactor;
-
-  return 0;
 }
 
 bool D3DGraphicsDriver::SupportsGammaControl() 
@@ -1002,7 +1030,6 @@ bool D3DGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth,
   _newmode_windowed = windowed;
   _loopTimer = loopTimer;
 
-  _filter->GetRealResolution(&_newmode_screen_width, &_newmode_screen_height);
   _filter->InitTargetFrame(_newmode_screen_width, _newmode_screen_height, _newmode_width, _newmode_height, placement);
   TargetFrame = _filter->GetTargetFrame();
 
@@ -1022,6 +1049,14 @@ bool D3DGraphicsDriver::Init(int virtualWidth, int virtualHeight, int realWidth,
 	  ConvertBitmapToSupportedColourDepth(BitmapHelper::CreateBitmap(virtualWidth, virtualHeight, colourDepth))
 	  );
   return true;
+}
+
+IGfxModeList *D3DGraphicsDriver::GetSupportedModeList(int color_depth)
+{
+  if (!EnsureDirect3D9IsCreated())
+    return false;
+
+  return new D3DGfxModeList(direct3d, color_depth_to_d3d_format(color_depth, false));
 }
 
 DisplayResolution D3DGraphicsDriver::GetResolution()

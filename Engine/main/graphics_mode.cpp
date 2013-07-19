@@ -79,12 +79,8 @@ struct ColorDepthOption
 Size              GameSize;
 DisplayResolution GameResolution;
 
-// set to 0 once successful
-int working_gfx_mode_status = -1;
 int debug_15bit_mode = 0, debug_24bit_mode = 0;
 int convert_16bit_bgr = 0;
-
-int ff; // whatever!
 
 int adjust_pixel_size_for_loaded_data(int size, int filever)
 {
@@ -131,11 +127,11 @@ void adjust_sizes_for_resolution(int filever)
 
         cgp->popupyp = adjust_pixel_size_for_loaded_data(cgp->popupyp, filever);
 
-        for (ff = 0; ff < cgp->numobjs; ff++) 
+        for (int i = 0; i < cgp->numobjs; ++i) 
         {
-            adjust_pixel_sizes_for_loaded_data(&cgp->objs[ff]->x, &cgp->objs[ff]->y, filever);
-            adjust_pixel_sizes_for_loaded_data(&cgp->objs[ff]->wid, &cgp->objs[ff]->hit, filever);
-            cgp->objs[ff]->activated=0;
+            adjust_pixel_sizes_for_loaded_data(&cgp->objs[i]->x, &cgp->objs[i]->y, filever);
+            adjust_pixel_sizes_for_loaded_data(&cgp->objs[i]->wid, &cgp->objs[i]->hit, filever);
+            cgp->objs[i]->activated=0;
         }
     }
 
@@ -159,7 +155,9 @@ void adjust_sizes_for_resolution(int filever)
 
 }
 
-void engine_init_screen_settings(ColorDepthOption &color_depths)
+int engine_init_gfx_filters(int color_depth);
+
+int engine_init_screen_settings(Size &screen_size, Placement &drawing_place, ColorDepthOption &color_depths)
 {
     Out::FPrint("Initializing screen settings");
 
@@ -238,6 +236,11 @@ void engine_init_screen_settings(ColorDepthOption &color_depths)
         wtext_multiply = 1;
     }
 
+    // GameResolution Width and Height is now always the same as GameSize;
+    // the borders are handled exclusively by graphics driver.
+    GameResolution.Width = GameSize.Width;
+    GameResolution.Height = GameSize.Height;
+
     usetup.textheight = wgetfontheight(0) + 1;
     current_screen_resolution_multiplier = GameSize.Width / usetup.base_width;
 
@@ -250,20 +253,61 @@ void engine_init_screen_settings(ColorDepthOption &color_depths)
 
     // don't allow them to force a 256-col game to hi-color
     if (game.color_depth < 2)
+    {
         usetup.force_hicolor_mode = 0;
+    }
 
     color_depths.First = 8;
     color_depths.Second = 8;
-    if ((game.color_depth == 2) || (force_16bit) || (usetup.force_hicolor_mode)) {
+    if (debug_15bit_mode)
+    {
+        color_depths.First = 15;
+        color_depths.Second = 15;
+    }
+    else if (debug_24bit_mode)
+    {
+        color_depths.First = 24;
+        color_depths.Second = 24;
+    }
+    else if ((game.color_depth == 2) || (force_16bit) || (usetup.force_hicolor_mode))
+    {
         color_depths.First = 16;
         color_depths.Second = 15;
     }
-    else if (game.color_depth > 2) {
+    else if (game.color_depth > 2)
+    {
         color_depths.First = 32;
         color_depths.Second = 24;
     }
 
+    int res = engine_init_gfx_filters(color_depths.First);
+    if (res != RETURN_CONTINUE) {
+        return res;
+    }
+
+    drawing_place = kPlaceStretch;
+    if (usetup.drawing_place == kRenderPlaceResizeWindow)
+    {
+        screen_size.Width = GameSize.Width;
+        screen_size.Height = GameSize.Height;
+        gfxFilter->GetRealResolution(&screen_size.Width, &screen_size.Height);
+    }
+    else
+    {
+        screen_size = usetup.screen_size;
+        switch (usetup.drawing_place)
+        {
+        case kRenderPlaceCenter:
+            drawing_place = kPlaceCenter;
+            break;
+        case kRenderPlaceStretchProportional:
+            drawing_place = kPlaceStretchProportional;
+            break;
+        }
+    }
+
     adjust_sizes_for_resolution(loaded_game_file_version);
+    return RETURN_CONTINUE;
 }
 
 int initialize_graphics_filter(const char *filterID, const int colDepth)
@@ -374,126 +418,124 @@ void create_gfx_driver()
     gfxDriver->SetTintMethod(TintReColourise);
 }
 
-int init_gfx_mode(const int width, const int height, const int color_depth) {
-
-    // a mode has already been initialized, so abort
-    if (working_gfx_mode_status == 0) return 0;
-
-    GameResolution.Width = width;
-    GameResolution.Height = height;
+bool init_gfx_mode(const Size screen_size, const Placement drawing_place, const int color_depth)
+{
     GameResolution.ColorDepth = color_depth;
 
-    if (debug_15bit_mode)
-        GameResolution.ColorDepth = 15;
-    else if (debug_24bit_mode)
-        GameResolution.ColorDepth = 24;
-
-    Out::FPrint("Attempt to switch gfx mode to %d x %d (%d-bit)", GameResolution.Width, GameResolution.Height, GameResolution.ColorDepth);
+    Out::FPrint("Attempt to switch gfx mode to %d x %d (%d-bit)",
+        screen_size.Width, screen_size.Height, GameResolution.ColorDepth);
 
     if (usetup.refresh >= 50)
+    {
         request_refresh_rate(usetup.refresh);
+    }
 
-    if (game.color_depth == 1) {
+    if (game.color_depth == 1)
+    {
         GameResolution.ColorDepth = 8;
     }
-    else {
+    else
+    {
         set_color_depth(GameResolution.ColorDepth);
     }
 
-    working_gfx_mode_status =
-        (gfxDriver->Init(GameSize.Width, GameSize.Height, GameResolution.Width, GameResolution.Height, kPlaceStretch,
-                         GameResolution.ColorDepth, usetup.windowed > 0, &timerloop) ? 0 : -1);
-
-    if (working_gfx_mode_status == 0) 
-        Out::FPrint("Succeeded. Using gfx mode %d x %d (%d-bit)", GameResolution.Width, GameResolution.Height, GameResolution.ColorDepth);
-    else
-        Out::FPrint("Failed, resolution not supported");
-
-    if ((working_gfx_mode_status < 0) && (usetup.windowed > 0) && (editor_debugging_enabled == 0)) {
-        usetup.windowed ++;
-        if (usetup.windowed > 2) usetup.windowed = 0;
-        return init_gfx_mode(width, height, color_depth);
+    bool success =
+        gfxDriver->Init(GameSize.Width, GameSize.Height, screen_size.Width, screen_size.Height, drawing_place,
+                         GameResolution.ColorDepth, usetup.windowed > 0, &timerloop);
+    if (success)
+    {
+        Out::FPrint("Succeeded. Using gfx mode %d x %d (%d-bit) %s",
+            screen_size.Width, screen_size.Height, GameResolution.ColorDepth, usetup.windowed > 0 ? "windowed" : "fullscreen");
     }
-    return working_gfx_mode_status;    
+    else
+    {
+        Out::FPrint("Failed, resolution not supported");
+    }
+    return success;
 }
 
-int try_widescreen_bordered_graphics_mode_if_appropriate(const int width, const int height, const int color_depth)
+bool find_nearest_supported_mode(Size &wanted_size, const int color_depth)
 {
-    if (working_gfx_mode_status == 0) return 0;
-    if (usetup.enable_side_borders == 0)
+    IGfxModeList *modes = gfxDriver->GetSupportedModeList(color_depth);
+    if (!modes)
     {
-        Out::FPrint("Widescreen side borders: disabled in Setup");
-        return 1;
+        return false;
     }
-    if (usetup.windowed > 0)
+    
+    int nearest_width = 0;
+    int nearest_height = 0;
+    int nearest_width_diff = 0;
+    int nearest_height_diff = 0;
+    int mode_count = modes->GetModeCount();
+    DisplayResolution mode;
+    for (int i = 0; i < mode_count; ++i)
     {
-        Out::FPrint("Widescreen side borders: disabled (windowed mode)");
-        return 1;
-    }
-
-    int failed = 1;
-    int desktopWidth, desktopHeight;
-    if (get_desktop_resolution(&desktopWidth, &desktopHeight) == 0)
-    {
-        int screenRatio = (desktopWidth * 1000) / desktopHeight;
-        int gameRatio = (width * 1000) / height;
-        // 1250 = 1280x1024 
-        // 1333 = 640x480, 800x600, 1024x768, 1152x864, 1280x960
-        // 1600 = 640x400, 960x600, 1280x800, 1680x1050
-        // 1666 = 1280x768
-
-        Out::FPrint("Widescreen side borders: game resolution: %d x %d; desktop resolution: %d x %d", width, height, desktopWidth, desktopHeight);
-
-        if ((screenRatio > 1500) && (gameRatio < 1500))
+        if (!modes->GetMode(i, mode))
         {
-            int tryWidth = (width * screenRatio) / gameRatio;
-            int supportedRes = gfxDriver->FindSupportedResolutionWidth(tryWidth, height, color_depth, 110);
-            if (supportedRes > 0)
-            {
-                tryWidth = supportedRes;
-                Out::FPrint("Widescreen side borders: enabled, attempting resolution %d x %d", tryWidth, height);
-            }
-            else
-            {
-                Out::FPrint("Widescreen side borders: gfx card does not support suitable resolution. will attempt %d x %d anyway", tryWidth, height);
-            }
-            failed = init_gfx_mode(tryWidth, height, color_depth);
+            continue;
+        }
+        if (mode.ColorDepth != color_depth)
+        {
+            continue;
+        }
+        if (mode.Width == wanted_size.Width && mode.Height == wanted_size.Height)
+        {
+            return true;
+        }
+      
+        int diff_w = abs(wanted_size.Width - mode.Width);
+        int diff_h = abs(wanted_size.Height - mode.Height);
+        bool same_diff_w_higher = (diff_w == nearest_width_diff && nearest_width < wanted_size.Width);
+        bool same_diff_h_higher = (diff_h == nearest_height_diff && nearest_height < wanted_size.Height);
+
+        if (nearest_width == 0 ||
+            (diff_w < nearest_width_diff || same_diff_w_higher) && diff_h <= nearest_height_diff ||
+            (diff_h < nearest_height_diff || same_diff_h_higher) && diff_w <= nearest_width_diff)
+        {
+            nearest_width = mode.Width;
+            nearest_width_diff = diff_w;
+            nearest_height = mode.Height;
+            nearest_height_diff = diff_h;
+        }
+    }
+
+    delete modes;
+    if (nearest_width > 0 && nearest_height > 0)
+    {
+        wanted_size.Width = nearest_width;
+        wanted_size.Height = nearest_height;
+        return true;
+    }
+    return false;
+}
+
+bool try_init_gfx_mode(const Size screen_size, const Placement drawing_place, const int color_depth)
+{
+    Out::FPrint("Trying gfx mode %d x %d (%d-bit) %s", screen_size.Width, screen_size.Height, color_depth, usetup.windowed > 0 ? "windowed" : "fullscreen");
+    bool success = init_gfx_mode(screen_size, drawing_place, color_depth);
+    if (!success)
+    {
+        Out::FPrint("Attempting to find nearest supported resolution");
+        Size fixed_screen_size = screen_size;
+        if (find_nearest_supported_mode(fixed_screen_size, color_depth))
+        {
+            Out::FPrint("Trying gfx mode %d x %d (%d-bit)", fixed_screen_size.Width, fixed_screen_size.Height, color_depth);
+            success = init_gfx_mode(fixed_screen_size, drawing_place, color_depth);
         }
         else
         {
-            Out::FPrint("Widescreen side borders: disabled (not necessary, game and desktop aspect ratios match)", width, height, desktopWidth, desktopHeight);
+            Out::FPrint("Couldn't get a list of supported resolutions");
         }
     }
-    else 
-    {
-        Out::FPrint("Widescreen side borders: disabled (unable to obtain desktop resolution)");
-    }
-    return failed;
+    return success;
 }
 
-int switch_to_graphics_mode(const ColorDepthOption color_depths) 
+bool switch_to_graphics_mode(const Size init_screen_size, const Placement drawing_place, const ColorDepthOption color_depths) 
 {
-    int failed;
-    int initasyLetterbox = (GameSize.Height * 12) / 10;
-
-    // first of all, try 16-bit normal then letterboxed
-    failed = try_widescreen_bordered_graphics_mode_if_appropriate(GameSize.Width, GameSize.Height, color_depths.First);
-    failed = init_gfx_mode(GameSize.Width, GameSize.Height, color_depths.First);
-    failed = try_widescreen_bordered_graphics_mode_if_appropriate(GameSize.Width, initasyLetterbox, color_depths.First);
-    failed = init_gfx_mode(GameSize.Width, initasyLetterbox, color_depths.First);
-
-    if (color_depths.Second != color_depths.First) {
-        // now, try 15-bit normal then letterboxed
-        failed = try_widescreen_bordered_graphics_mode_if_appropriate(GameSize.Width, GameSize.Height, color_depths.Second);
-        failed = init_gfx_mode(GameSize.Width, GameSize.Height, color_depths.Second);
-        failed = try_widescreen_bordered_graphics_mode_if_appropriate(GameSize.Width, initasyLetterbox, color_depths.Second);
-        failed = init_gfx_mode(GameSize.Width, initasyLetterbox, color_depths.Second);
-    }
-
-    if (failed)
-        return -1;
-
-    return 0;
+    bool success = try_init_gfx_mode(init_screen_size, drawing_place, color_depths.First);
+    if (!success && color_depths.Second != color_depths.First)
+        success = try_init_gfx_mode(init_screen_size, drawing_place, color_depths.Second);
+    return success;
 }
 
 void engine_init_gfx_driver()
@@ -503,30 +545,23 @@ void engine_init_gfx_driver()
     create_gfx_driver();
 }
 
-int engine_init_graphics_mode(const ColorDepthOption color_depths)
+int engine_init_graphics_mode(const Size screen_size, const Placement drawing_place, const ColorDepthOption color_depths)
 {
     Out::FPrint("Switching to graphics mode");
 
-    if (switch_to_graphics_mode(color_depths))
+    if (!switch_to_graphics_mode(screen_size, drawing_place, color_depths))
     {
         proper_exit=1;
         platform->FinishedUsingGraphicsMode();
-
-        // make sure the error message displays the true resolution
-        int game_width = GameSize.Width;
-        int game_height = GameSize.Height;
-
-        if (gfxFilter != NULL)
-            gfxFilter->GetRealResolution(&game_width, &game_height);
 
         platform->DisplayAlert("There was a problem initializing graphics mode %d x %d (%d-bit).\n"
             "(Problem: '%s')\n"
             "Try to correct the problem, or seek help from the AGS homepage.\n"
             "\nPossible causes:\n* your graphics card drivers do not support this resolution. "
             "Run the game setup program and try the other resolution.\n"
-            "* the graphics driver you have selected does not work. Try switching between Direct3D and DirectDraw.\n"
+            "* the graphics driver you have selected does not work. Try changing graphics driver.\n"
             "* the graphics filter you have selected does not work. Try another filter.",
-            game_width, game_height, color_depths.First, allegro_error);
+            screen_size.Width, screen_size.Height, color_depths.First, allegro_error);
         return EXIT_NORMAL;
     }
 
@@ -568,8 +603,9 @@ void engine_post_init_gfx_driver()
 
 void engine_prepare_screen()
 {
+    DisplayResolution disp_res = gfxDriver->GetResolution();
     Out::FPrint("Preparing graphics mode screen");
-    Out::FPrint("Screen resolution: %d x %d; game resolution %d x %d", GameResolution.Width, GameResolution.Height, GameSize.Width, GameSize.Height);
+    Out::FPrint("Screen resolution: %d x %d; game resolution %d x %d", disp_res.Width, disp_res.Height, GameSize.Width, GameSize.Height);
 
     // Most cards do 5-6-5 RGB, which is the format the files are saved in
     // Some do 5-6-5 BGR, or  6-5-5 RGB, in which case convert the gfx
@@ -656,16 +692,19 @@ void engine_set_color_conversions()
 
 int graphics_mode_init()
 {
+    Size screen_size;
+    Placement drawing_place;
     ColorDepthOption color_depths;
 
-    engine_init_screen_settings(color_depths);
-    int res = engine_init_gfx_filters(color_depths.First);
-    if (res != RETURN_CONTINUE) {
+    int res = engine_init_screen_settings(screen_size, drawing_place, color_depths);
+    if (res != RETURN_CONTINUE)
+    {
         return res;
     }
     engine_init_gfx_driver();
-    res = engine_init_graphics_mode(color_depths);
-    if (res != RETURN_CONTINUE) {
+    res = engine_init_graphics_mode(screen_size, drawing_place, color_depths);
+    if (res != RETURN_CONTINUE)
+    {
         return res;
     }
 

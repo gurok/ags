@@ -18,7 +18,16 @@
 #ifndef __AGS_EE_MAIN__GRAPHICSMODE_H
 #define __AGS_EE_MAIN__GRAPHICSMODE_H
 
-#include "gfx/graphicsdriver.h"
+#include "gfx/gfxmodelist.h"
+#include "util/geometry.h"
+
+enum RenderFramePlacement
+{
+    kRenderPlaceCenter,
+    kRenderPlaceStretch,
+    kRenderPlaceStretchProportional,
+    kRenderPlaceResizeWindow
+};
 
 int graphics_mode_init();
 

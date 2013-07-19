@@ -19,6 +19,7 @@
 #ifndef __AGS_EE_GFX__GRAPHICSDRIVER_H
 #define __AGS_EE_GFX__GRAPHICSDRIVER_H
 
+#include "gfx/gfxmodelist.h"
 #include "util/geometry.h"
 
 namespace AGS
@@ -58,27 +59,6 @@ typedef void (*GFXDRV_CLIENTCALLBACK)();
 typedef bool (*GFXDRV_CLIENTCALLBACKXY)(int x, int y);
 typedef void (*GFXDRV_CLIENTCALLBACKINITGFX)(void *data);
 
-struct DisplayResolution
-{
-    int32_t Width;
-    int32_t Height;
-    int32_t ColorDepth;
-
-    DisplayResolution()
-        : Width(0)
-        , Height(0)
-        , ColorDepth(0)
-    {
-    }
-
-    DisplayResolution(int32_t width, int32_t height, int32_t color_depth)
-    {
-        Width = width;
-        Height = height;
-        ColorDepth = color_depth;
-    }
-};
-
 class IGraphicsDriver
 {
 public:
@@ -94,7 +74,7 @@ public:
   }
   virtual bool Init(int virtualWidth, int virtualHeight, int realWidth, int realHeight, Placement placement,
                     int colourDepth, bool windowed, volatile int *loopTimer) = 0;
-  virtual int  FindSupportedResolutionWidth(int idealWidth, int height, int colDepth, int widthRangeAllowed) = 0;
+  virtual IGfxModeList *GetSupportedModeList(int color_depth) = 0;
   virtual void SetCallbackForPolling(GFXDRV_CLIENTCALLBACK callback) = 0;
   virtual void SetCallbackToDrawScreen(GFXDRV_CLIENTCALLBACK callback) = 0;
   virtual void SetCallbackOnInit(GFXDRV_CLIENTCALLBACKINITGFX callback) = 0;

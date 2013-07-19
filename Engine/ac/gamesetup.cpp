@@ -30,4 +30,5 @@ GameSetup::GameSetup()
     base_height = 200;
     gfxFilterID = NULL;
     gfxDriverID = NULL;
+    drawing_place = kRenderPlaceResizeWindow;
 }

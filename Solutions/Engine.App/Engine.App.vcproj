@@ -1691,6 +1691,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\Engine\gfx\gfxmodelist.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\Engine\gfx\graphicsdriver.h"
 					>
 				</File>
