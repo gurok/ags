@@ -103,6 +103,7 @@ extern void PauseGame();
 extern void UnPauseGame();
 extern int main(int argc,char*argv[]);
 
+char android_base_directory[256];
 char android_app_directory[256];
 char psp_game_file_name[256];
 char* psp_game_file_name_pointer = psp_game_file_name;
@@ -468,6 +469,7 @@ JNIEXPORT jboolean JNICALL
   // Get the base directory (usually "/sdcard/ags").
   const char* cdirectory = java_environment->GetStringUTFChars(directory, NULL);
   chdir(cdirectory);
+  strcpy(android_base_directory, cdirectory);
   java_environment->ReleaseStringUTFChars(directory, cdirectory);
 
   // Get the app directory (something like "/data/data/com.bigbluecup.android.launcher")
@@ -675,7 +677,7 @@ void AGSAndroid::WriteDebugString(const char* texx, ...)
     va_start(ap,texx);
     vsprintf(&displbuf[5],texx,ap);
     va_end(ap);
-    __android_log_print(ANDROID_LOG_DEBUG, "AGSNative", displbuf);
+    __android_log_print(ANDROID_LOG_DEBUG, "AGSNative", "%s", displbuf);
   }
 }
 
@@ -712,7 +714,7 @@ void AGSAndroid::DisplayAlert(const char *text, ...) {
   JNIEnv* thread_env;
   android_jni_vm->AttachCurrentThread(&thread_env, NULL);
 
-  __android_log_print(ANDROID_LOG_DEBUG, "AGSNative", displbuf);
+  __android_log_print(ANDROID_LOG_DEBUG, "AGSNative", "%s", displbuf);
 
   jstring java_string = thread_env->NewStringUTF(displbuf);
   thread_env->CallVoidMethod(java_object, java_messageCallback, java_string);
@@ -765,7 +767,7 @@ void AGSAndroid::WriteConsole(const char *text, ...) {
   va_start(ap, text);
   vsprintf(displbuf, text, ap);
   va_end(ap);
-  __android_log_print(ANDROID_LOG_DEBUG, "AGSNative", displbuf);  
+  __android_log_print(ANDROID_LOG_DEBUG, "AGSNative", "%s", displbuf);  
 }
 
 void AGSAndroid::ShutdownCDPlayer() {

@@ -18,20 +18,11 @@
 #ifndef __AGS_CN_AC__GAMESTRUCTDEFINES_H
 #define __AGS_CN_AC__GAMESTRUCTDEFINES_H
 
-#if defined (WINDOWS_VERSION)
-// These are also defined in wingdi.h
-#undef VTA_LEFT
-#undef VTA_RIGHT
-#endif
-
 #define POPUP_NONE      0
 #define POPUP_MOUSEY    1
 #define POPUP_SCRIPT    2
 #define POPUP_NOAUTOREM 3  // don't remove automatically during cutscene
 #define POPUP_NONEINITIALLYOFF 4   // normal GUI, initially off
-#define VTA_LEFT        0
-#define VTA_RIGHT       1
-#define VTA_CENTRE      2
 #define IFLG_TEXTWINDOW 1
 
 #define PAL_GAMEWIDE        0
@@ -39,7 +30,7 @@
 #define PAL_BACKGROUND      2
 #define MAXGLOBALMES        500
 #define MAXLANGUAGE         5
-#define MAX_FONTS           15
+#define MAX_FONTS           30
 #define OPT_DEBUGMODE       0
 #define OPT_SCORESOUND      1
 #define OPT_WALKONLOOK      2
@@ -79,8 +70,11 @@
 #define OPT_NEWGUIALPHA     36
 #define OPT_RUNGAMEDLGOPTS  37
 #define OPT_NATIVECOORDINATES 38
-#define OPT_OLDTALKANIMSPD  39
-#define OPT_HIGHESTOPTION   39
+#define OPT_GLOBALTALKANIMSPD 39
+#define OPT_HIGHESTOPTION_321 39
+#define OPT_SPRITEALPHA     40
+#define OPT_HIGHESTOPTION_330 40
+#define OPT_HIGHESTOPTION   OPT_HIGHESTOPTION_330
 #define OPT_NOMODMUSIC      98
 #define OPT_LIPSYNCTEXT     99
 #define PORTRAIT_LEFT       0

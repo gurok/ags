@@ -38,6 +38,7 @@
 #include "ac/spritecache.h"
 #include "gfx/graphicsdriver.h"
 #include "gfx/bitmap.h"
+#include "gfx/gfx_util.h"
 
 using AGS::Common::Bitmap;
 
@@ -176,12 +177,8 @@ void SetObjectFrame(int obn,int viw,int lop,int fra) {
 void SetObjectTransparency(int obn,int trans) {
     if (!is_valid_object(obn)) quit("!SetObjectTransparent: invalid object number specified");
     if ((trans < 0) || (trans > 100)) quit("!SetObjectTransparent: transparency value must be between 0 and 100");
-    if (trans == 0)
-        objs[obn].transparent=0;
-    else if (trans == 100)
-        objs[obn].transparent = 255;
-    else
-        objs[obn].transparent=((100-trans) * 25) / 10;
+
+    objs[obn].transparent = GfxUtil::Trans100ToLegacyTrans255(trans);
 }
 
 
@@ -261,7 +258,7 @@ void MergeObject(int obn) {
     int xpos = multiply_up_coordinate(objs[obn].x);
     int ypos = (multiply_up_coordinate(objs[obn].y) - theHeight);
 
-    draw_sprite_support_alpha(bg_frame, xpos, ypos, actsps[obn], objs[obn].num);
+    draw_sprite_support_alpha(bg_frame, false, xpos, ypos, actsps[obn], (game.spriteflags[objs[obn].num] & SPF_ALPHACHANNEL) != 0);
     invalidate_screen();
     mark_current_background_dirty();
 

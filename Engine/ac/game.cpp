@@ -244,7 +244,7 @@ int Game_IsAudioPlaying(int audioType)
     for (int aa = 0; aa < MAX_SOUND_CHANNELS; aa++)
     {
         ScriptAudioClip *clip = AudioChannel_GetPlayingClip(&scrAudioChannel[aa]);
-        if (clip != NULL) 
+        if (clip != NULL)
         {
             if ((clip->type == audioType) || (audioType == SCR_NO_VALUE))
             {
@@ -279,8 +279,7 @@ void Game_SetAudioTypeVolume(int audioType, int volume, int changeType)
             ScriptAudioClip *clip = AudioChannel_GetPlayingClip(&scrAudioChannel[aa]);
             if ((clip != NULL) && (clip->type == audioType))
             {
-                channels[aa]->set_volume((volume * 255) / 100);
-                channels[aa]->volAsPercentage = volume;
+                channels[aa]->set_volume_origin(volume);
             }
         }
     }
@@ -294,7 +293,7 @@ void Game_SetAudioTypeVolume(int audioType, int volume, int changeType)
 }
 
 int Game_GetMODPattern() {
-    if (current_music_type == MUS_MOD) {
+    if (current_music_type == MUS_MOD && channels[SCHAN_MUSIC]) {
         return channels[SCHAN_MUSIC]->get_pos();
     }
     return -1;
@@ -346,14 +345,13 @@ String get_save_game_path(int slotNum) {
     return path;
 }
 
-
-
-int Game_SetSaveGameDirectory(const char *newFolder) {
+int SetSaveGameDirectoryPath(const char *newFolder, bool allowAbsolute)
+{
 
     // don't allow them to go to another folder
-    if ((newFolder[0] == '/') || (newFolder[0] == '\\') ||
+    if ((!allowAbsolute) && ((newFolder[0] == '/') || (newFolder[0] == '\\') ||
         (newFolder[0] == ' ') ||
-        ((newFolder[0] != 0) && (newFolder[1] == ':')))
+        ((newFolder[0] != 0) && (newFolder[1] == ':'))))
         return 0;
 
     char newSaveGameDir[260];
@@ -372,7 +370,8 @@ int Game_SetSaveGameDirectory(const char *newFolder) {
     strcpy(newFolderTempFile, newSaveGameDir);
     strcat(newFolderTempFile, "agstmp.tmp");
 
-    if (!Common::File::TestCreateFile(newFolderTempFile)) {
+    if (!Common::File::TestCreateFile(newFolderTempFile))
+	{
         return 0;
     }
 
@@ -380,7 +379,8 @@ int Game_SetSaveGameDirectory(const char *newFolder) {
     char restartGamePath[260];
     sprintf(restartGamePath, "%s""agssave.%d%s", saveGameDirectory, RESTART_POINT_SAVE_GAME_NUMBER, saveGameSuffix);
     Stream *restartGameFile = Common::File::OpenFileRead(restartGamePath);
-    if (restartGameFile != NULL) {
+    if (restartGameFile != NULL)
+	{
         long fileSize = restartGameFile->GetLength();
         char *mbuffer = (char*)malloc(fileSize);
         restartGameFile->Read(mbuffer, fileSize);
@@ -395,6 +395,11 @@ int Game_SetSaveGameDirectory(const char *newFolder) {
 
     strcpy(saveGameDirectory, newSaveGameDir);
     return 1;
+}
+
+int Game_SetSaveGameDirectory(const char *newFolder)
+{
+	return SetSaveGameDirectoryPath(newFolder, false);
 }
 
 
@@ -470,13 +475,13 @@ void setup_sierra_interface() {
 }
 
 
-void free_do_once_tokens() 
+void free_do_once_tokens()
 {
     for (int i = 0; i < play.num_do_once_tokens; i++)
     {
         free(play.do_once_tokens[i]);
     }
-    if (play.do_once_tokens != NULL) 
+    if (play.do_once_tokens != NULL)
     {
         free(play.do_once_tokens);
         play.do_once_tokens = NULL;
@@ -929,7 +934,20 @@ int Game_ChangeTranslation(const char *newFilename)
 //=============================================================================
 
 // save game functions
-#define SGVERSION 8
+
+//-----------------------------------------------------------------------------
+// Saved game version history
+//
+// 8      original format (3.2.1)
+//-----------------------------------------------------------------------------
+enum SavedGameVersion
+{
+    kSvgVersion_Undefined = 0,
+    kSvgVersion_321       = 8,
+    kSvgVersion_Current   = kSvgVersion_321,
+    kSvgVersion_LowestSupported = kSvgVersion_321
+};
+
 char*sgsig="Adventure Game Studio saved game";
 int sgsiglen=32;
 
@@ -972,7 +990,7 @@ void safeguard_string (unsigned char *descript) {
 }
 
 // On Windows we could just use IIDFromString but this is platform-independant
-void convert_guid_from_text_to_binary(const char *guidText, unsigned char *buffer) 
+void convert_guid_from_text_to_binary(const char *guidText, unsigned char *buffer)
 {
     guidText++; // skip {
     for (int bytesDone = 0; bytesDone < 16; bytesDone++)
@@ -1028,7 +1046,7 @@ Bitmap *read_serialized_bitmap(Stream *in) {
     return thispic;
 }
 
-long write_screen_shot_for_vista(Stream *out, Bitmap *screenshot) 
+long write_screen_shot_for_vista(Stream *out, Bitmap *screenshot)
 {
     long fileSize = 0;
     char tempFileName[MAX_PATH];
@@ -1373,7 +1391,7 @@ void WriteGameState_Aligned(Stream *out)
 void save_game_data (Stream *out, Bitmap *screenshot) {
 
     platform->RunPluginHooks(AGSE_PRESAVEGAME, 0);
-    out->WriteInt32(SGVERSION);
+    out->WriteInt32(kSvgVersion_Current);
 
     save_game_screenshot(out, screenshot);
     save_game_header(out);
@@ -1424,7 +1442,7 @@ void save_game_data (Stream *out, Bitmap *screenshot) {
 
     out->WriteInt32 (MAGICNUMBER+1);
 
-    save_game_audioclips_and_crossfade(out);  
+    save_game_audioclips_and_crossfade(out);
 
     // [IKM] Plugins expect FILE pointer! // TODO something with this later...
     platform->RunPluginHooks(AGSE_SAVEGAME, (long)((Common::FileStream*)out)->GetHandle());
@@ -1687,7 +1705,7 @@ void restore_game_clean_scripts()
     }
 }
 
-void restore_game_scripts(Stream *in, int &gdatasize, char **newglobaldatabuffer, 
+void restore_game_scripts(Stream *in, int &gdatasize, char **newglobaldatabuffer,
                           char **scriptModuleDataBuffers, int *scriptModuleDataSize)
 {
     // read the global script data segment
@@ -1927,7 +1945,7 @@ void restore_game_overlays(Stream *in)
     numscreenover = in->ReadInt32();
     ReadOverlays_Aligned(in);
     for (int bb=0;bb<numscreenover;bb++) {
-        if (screenover[bb].pic != NULL)
+        if (screenover[bb].hasSerializedBitmap)
         {
             screenover[bb].pic = read_serialized_bitmap(in);
             screenover[bb].bmp = gfxDriver->CreateDDBFromBitmap(screenover[bb].pic, false);
@@ -1976,10 +1994,10 @@ void restore_game_displayed_room_status(Stream *in, Bitmap **newbscene)
 
         if (troom.tsdata != NULL)
             free (troom.tsdata);
-        
+
         // get the current troom, in case they save in room 600 or whatever
         ReadRoomStatus_Aligned(&troom, in);
-        
+
         if (troom.tsdatasize > 0) {
             troom.tsdata=(char*)malloc(troom.tsdatasize+5);
             in->Read(&troom.tsdata[0],troom.tsdatasize);
@@ -1991,7 +2009,7 @@ void restore_game_displayed_room_status(Stream *in, Bitmap **newbscene)
 
 void restore_game_globalvars(Stream *in)
 {
-    if (in->ReadInt32() != numGlobalVars) 
+    if (in->ReadInt32() != numGlobalVars)
         quit("!Game has been modified since save; unable to restore game (GM01)");
 
     for (int i = 0; i < numGlobalVars; ++i)
@@ -2047,9 +2065,8 @@ void restore_game_audioclips_and_crossfade(Stream *in, int crossfadeInChannelWas
             if (channels[bb] != NULL)
             {
                 channels[bb]->set_panning(pan);
-                channels[bb]->set_volume(vol);
+                channels[bb]->set_volume_alternate(volAsPercent, vol);
                 channels[bb]->panningAsPercentage = panAsPercent;
-                channels[bb]->volAsPercentage = volAsPercent;
             }
         }
     }
@@ -2073,7 +2090,7 @@ void restore_game_audioclips_and_crossfade(Stream *in, int crossfadeInChannelWas
     crossFadeVolumeAtStart = in->ReadInt32();
 }
 
-int restore_game_data (Stream *in, const char *nametouse) {
+int restore_game_data (Stream *in, const char *nametouse, SavedGameVersion svg_version) {
 
     int bb, vv;
 
@@ -2083,7 +2100,7 @@ int restore_game_data (Stream *in, const char *nametouse) {
         return res;
     }
 
-    restore_game_spriteset(in); 
+    restore_game_spriteset(in);
 
     clear_music_cache();
     restore_game_clean_gfx();
@@ -2127,7 +2144,7 @@ int restore_game_data (Stream *in, const char *nametouse) {
     if (game.numviews != numviewswas)
         quit("!Restore_Game: Game has changed (views), unable to restore position");
 
-    game.ReadFromSaveGame_v321(in, gswas, compsc, chwas, olddict, mesbk); 
+    game.ReadFromSaveGame_v321(in, gswas, compsc, chwas, olddict, mesbk);
     //
     //in->ReadArray(&game.invinfo[0], sizeof(InventoryItemInfo), game.numinvitems);
     //in->ReadArray(&game.mcurs[0], sizeof(MouseCursor), game.numcursors);
@@ -2156,7 +2173,7 @@ int restore_game_data (Stream *in, const char *nametouse) {
     ReadCharacterExtras_Aligned(in);
     if (roominst!=NULL) {  // so it doesn't overwrite the tsdata
         delete roominstFork;
-        delete roominst; 
+        delete roominst;
         roominstFork = NULL;
         roominst=NULL;
     }
@@ -2211,6 +2228,15 @@ int restore_game_data (Stream *in, const char *nametouse) {
 
     // preserve legacy music type setting
     current_music_type = in->ReadInt32();
+    // test if the playing music was properly loaded
+    if (current_music_type > 0)
+    {
+        if (crossFading > 0 && !channels[crossFading] ||
+            crossFading <= 0 && !channels[SCHAN_MUSIC])
+        {
+            current_music_type = 0;
+        }
+    }
 
     // restore these to the ones retrieved from the save game
     for (bb = 0; bb < MAX_DYNAMIC_SURFACES; bb++)
@@ -2374,6 +2400,11 @@ int restore_game_data (Stream *in, const char *nametouse) {
     return 0;
 }
 
+int restore_game_data (Common::Stream *in, const char *nametouse)
+{
+    return restore_game_data (in, nametouse, kSvgVersion_321);
+}
+
 int gameHasBeenRestored = 0;
 int oldeip;
 
@@ -2383,7 +2414,7 @@ void ReadRichMediaHeader_Aligned(RICH_GAME_MEDIA_HEADER &rich_media_header, Stre
     rich_media_header.ReadFromFile(&align_s);
 }
 
-Stream *open_savedgame(const char *savedgame, int &error_code)
+Stream *open_savedgame(const char *savedgame, int &error_code, SavedGameVersion *out_svg_version = NULL)
 {
     error_code = 0;
     Stream *in = Common::File::OpenFileRead(savedgame);
@@ -2416,7 +2447,13 @@ Stream *open_savedgame(const char *savedgame, int &error_code)
     safeguard_string ((unsigned char*)rbuffer);
 
     // check saved game format version
-    if (in->ReadInt32() != SGVERSION) {
+    SavedGameVersion svg_version = (SavedGameVersion)in->ReadInt32();
+    if (out_svg_version)
+    {
+        *out_svg_version = svg_version;
+    }
+    if (svg_version < kSvgVersion_LowestSupported || svg_version > kSvgVersion_Current)
+    {
         delete in;
         error_code = -3;
         return NULL;
@@ -2479,8 +2516,9 @@ int load_game(const Common::String &path, int slotNumber)
 {
     gameHasBeenRestored++;
 
-    int error_code;
-    Stream *in = open_savedgame(path, error_code);
+    SavedGameVersion svg_version;
+    int error_code;    
+    Stream *in = open_savedgame(path, error_code, &svg_version);
     if (!in)
     {
         return error_code;
@@ -2514,7 +2552,7 @@ int load_game(const Common::String &path, int slotNumber)
     }
 
     // do the actual restore
-    error_code = restore_game_data(in, path);
+    error_code = restore_game_data(in, path, svg_version);
     delete in;
     our_eip = oldeip;
 
@@ -2571,12 +2609,11 @@ void stop_fast_forwarding() {
     // Restore actual volume of sounds
     for (int aa = 0; aa < MAX_SOUND_CHANNELS; aa++)
     {
-        if ((channels[aa] != NULL) && (!channels[aa]->done) && 
+        if ((channels[aa] != NULL) && (!channels[aa]->done) &&
             (channels[aa]->volAsPercentage == 0) &&
-            (channels[aa]->originalVolAsPercentage > 0)) 
+            (channels[aa]->originalVolAsPercentage > 0))
         {
-            channels[aa]->volAsPercentage = channels[aa]->originalVolAsPercentage;
-            channels[aa]->set_volume((channels[aa]->volAsPercentage * 255) / 100);
+            channels[aa]->reset_volume_to_origin();
         }
     }
 

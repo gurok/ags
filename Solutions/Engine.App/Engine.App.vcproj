@@ -756,10 +756,6 @@
 					RelativePath="..\..\Engine\gfx\gfxfilter_scaling.cpp"
 					>
 				</File>
-				<File
-					RelativePath="..\..\Engine\gfx\gfxfilterdefines.h"
-					>
-				</File>
 			</Filter>
 			<Filter
 				Name="gui"
@@ -1419,6 +1415,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\Engine\ac\speech.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\Engine\ac\sprite.h"
 					>
 				</File>
@@ -1684,6 +1684,10 @@
 				</File>
 				<File
 					RelativePath="..\..\Engine\gfx\gfxfilter_scaling.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\Engine\gfx\gfxfilterdefines.h"
 					>
 				</File>
 				<File

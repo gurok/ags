@@ -32,6 +32,7 @@
 #include "ac/lipsync.h"
 #include "ac/objectcache.h"
 #include "ac/roomstatus.h"
+#include "ac/speech.h"
 #include "ac/translation.h"
 #include "ac/viewframe.h"
 #include "ac/dynobj/scriptobject.h"
@@ -46,6 +47,7 @@
 #include "main/graphics_mode.h"
 #include "main/engine.h"
 #include "main/main.h"
+#include "main/main_allegro.h"
 #include "media/audio/sound.h"
 #include "ac/spritecache.h"
 #include "util/filestream.h"
@@ -62,11 +64,8 @@ using AGS::Common::String;
 using AGS::Common::Stream;
 using AGS::Common::Bitmap;
 namespace BitmapHelper = AGS::Common::BitmapHelper;
+namespace Path = AGS::Common::Path;
 namespace Out = AGS::Common::Out;
-
-#ifndef WINDOWS_VERSION
-extern char **global_argv;
-#endif
 
 extern char check_dynamic_sprites_at_exit;
 extern int our_eip;
@@ -213,40 +212,16 @@ void engine_force_window()
 void init_game_file_name_from_cmdline()
 {
     game_file_name.Empty();
-#ifdef WINDOWS_VERSION
-    WCHAR buffer[MAX_PATH];
-    WCHAR directoryPathBuffer[MAX_PATH];
-    LPCWSTR dataFilePath = wArgv[datafile_argv];
-    // Hack for Windows in case there are unicode chars in the path.
-    // The normal argv[] array has ????? instead of the unicode chars
-    // and fails, so instead we manually get the short file name, which
-    // is always using ANSI chars.
-    if (wcschr(dataFilePath, '\\') == NULL)
-    {
-        GetCurrentDirectoryW(MAX_PATH, buffer);
-        wcscat(buffer, L"\\");
-        wcscat(buffer, dataFilePath);
-        dataFilePath = &buffer[0];
-    }
-    if (GetShortPathNameW(dataFilePath, directoryPathBuffer, MAX_PATH) == 0)
-    {
-        platform->DisplayAlert("Unable to determine startup path: GetShortPathNameW failed. The specified game file might be missing.");
-        return;
-    }
-    char *buf = new char[MAX_PATH];
-    WideCharToMultiByte(CP_ACP, 0, directoryPathBuffer, -1, buf, MAX_PATH, NULL, NULL);
-    game_file_name = buf;
-    delete [] buf;
-#elif defined(PSP_VERSION) || defined(ANDROID_VERSION) || defined(IOS_VERSION)
+#if defined(PSP_VERSION) || defined(ANDROID_VERSION) || defined(IOS_VERSION)
     game_file_name = psp_game_file_name;
 #else
-    game_file_name = global_argv[datafile_argv];
+    game_file_name = GetPathFromCmdArg(datafile_argv);
 #endif
-    AGS::Common::Path::FixupPath(game_file_name);
 }
 
-String find_game_data_in_directory(const char *path)
+String find_game_data_in_directory(const String &path)
 {
+    String test_file;
     String found_data_file;
     // TODO: find a way to make this platform-agnostic way
     // using find-file interface or something
@@ -278,9 +253,10 @@ String find_game_data_in_directory(const char *path)
                     continue;
                 if (strcmp(version_info.internal_name, "acwin") == 0)
                 {
-                    if (AGS::Common::AssetManager::IsDataFile(entry->d_name))
+                    test_file.Format("%s/%s", path.GetCStr(), entry->d_name);
+                    if (AGS::Common::AssetManager::IsDataFile(test_file))
                     {
-                        found_data_file = entry->d_name;
+                        found_data_file = test_file;
                         break;
                     }
                 }
@@ -288,9 +264,10 @@ String find_game_data_in_directory(const char *path)
             else if (stricmp(&(entry->d_name[length - 4]), ".ags") == 0 ||
                 stricmp(entry->d_name, "ac2game.dat") == 0)
             {
-                if (AGS::Common::AssetManager::IsDataFile(entry->d_name))
+                test_file.Format("%s/%s", path.GetCStr(), entry->d_name);
+                if (AGS::Common::AssetManager::IsDataFile(test_file))
                 {
-                    found_data_file = entry->d_name;
+                    found_data_file = test_file;
                     break;
                 }
             }
@@ -323,9 +300,10 @@ String find_game_data_in_directory(const char *path)
                 strcmp(&(file_data.cFileName[length - 4]), ".ags") == 0 ||
                 strcmp(file_data.cFileName, "ac2game.dat") == 0)
             {
-                if (AGS::Common::AssetManager::IsDataFile(file_data.cFileName))
+                test_file.Format("%s/%s", path.GetCStr(), file_data.cFileName);
+                if (AGS::Common::AssetManager::IsDataFile(test_file))
                 {
-                    found_data_file = file_data.cFileName;
+                    found_data_file = test_file;
                     break;
                 }
             }
@@ -336,7 +314,6 @@ String find_game_data_in_directory(const char *path)
 #else
     // TODO ??? (PSP, ANDROID)
 #endif
-    AGS::Common::Path::FixupPath(found_data_file);
     return found_data_file;
 }
 
@@ -348,7 +325,7 @@ void initialise_game_file_name()
     {
         // set game_file_name from cmd arg (do any convertions if needed)
         init_game_file_name_from_cmdline();
-        if (game_file_name.GetLast() == '/')
+        if (!Path::IsFile(game_file_name))
         {
             // if it is not a file, assume it is a directory and seek for data file
             game_file_name = find_game_data_in_directory(game_file_name);
@@ -358,33 +335,32 @@ void initialise_game_file_name()
     else if (!usetup.main_data_filename.IsEmpty())
     {
         game_file_name = usetup.main_data_filename;
-        AGS::Common::Path::FixupPath(game_file_name);
     }
     // 3. Look in known locations
     else
     {
         // 3.1. Look for attachment in the running executable
         //
-        // set game_file_name from cmd arg (do any convertions if needed)
+        // set game_file_name from cmd arg (do any conversions if needed)
         // this will use argument zero, the executable's name
         init_game_file_name_from_cmdline();
-        if (!game_file_name.IsEmpty() && Common::AssetManager::IsDataFile(game_file_name))
+        if (game_file_name.IsEmpty() || !Common::AssetManager::IsDataFile(game_file_name))
         {
-            return;
-        }
-        // 3.2 Look in current directory
-        String cur_dir = AGS::Common::Directory::GetCurrentDirectory();
-        game_file_name = find_game_data_in_directory(cur_dir);
-        if (!game_file_name.IsEmpty())
-        {
-            return;
-        }
-        // 3.3 Look in executable's directory (if it's different from current dir)
-        if (AGS::Common::Path::ComparePaths(appDirectory, cur_dir))
-        {
-            game_file_name = find_game_data_in_directory(appDirectory);
+            // 3.2 Look in current directory
+            String cur_dir = AGS::Common::Directory::GetCurrentDirectory();
+            game_file_name = find_game_data_in_directory(cur_dir);
+            if (game_file_name.IsEmpty())
+            {
+                // 3.3 Look in executable's directory (if it's different from current dir)
+                if (AGS::Common::Path::ComparePaths(appDirectory, cur_dir))
+                {
+                    game_file_name = find_game_data_in_directory(appDirectory);
+                }
+            }
         }
     }
+
+    // Finally, store game file's absolute path, or report error
     if (game_file_name.IsEmpty())
     {
         AGS::Common::Out::FPrint("Game data file could not be found\n");
@@ -664,7 +640,7 @@ void engine_init_sound()
             if ((usetup.digicard != DIGI_NONE) && (usetup.midicard != MIDI_NONE)) {
                 // only flag an error if they wanted a sound card
                 platform->DisplayAlert("\nUnable to initialize your audio hardware.\n"
-                    "[Problem: %s]\n",allegro_error);
+                    "[Problem: %s]\n", get_allegro_error());
             }
             reserve_voices(0,0);
             install_sound(DIGI_NONE, MIDI_NONE, NULL);
@@ -817,6 +793,10 @@ void engine_init_directories()
     }
 }
 
+#if defined(ANDROID_VERSION)
+extern char android_base_directory[256];
+#endif // ANDROID_VERSION
+
 int check_write_access() {
 
   if (platform->GetDiskFreeSpaceMB() < 2)
@@ -829,7 +809,17 @@ int check_write_access() {
   sprintf(tempPath, "%s""tmptest.tmp", saveGameDirectory);
   Stream *temp_s = Common::File::CreateFile(tempPath);
   if (!temp_s)
+#if defined(ANDROID_VERSION)
+  {
+	  put_backslash(android_base_directory);
+	  sprintf(tempPath, "%s""tmptest.tmp", android_base_directory);
+	  temp_s = Common::File::CreateFile(tempPath);
+	  if (temp_s == NULL) return 0;
+	  else SetSaveGameDirectoryPath(android_base_directory, true);
+  }
+#else
     return 0;
+#endif // ANDROID_VERSION
 
   our_eip = -1896;
 
@@ -1053,7 +1043,17 @@ void init_game_settings() {
     }
     play.score=0;
     play.sierra_inv_color=7;
-    play.talkanim_speed = 5;
+    // copy the value set by the editor
+    if (game.options[OPT_GLOBALTALKANIMSPD] >= 0)
+    {
+        play.talkanim_speed = game.options[OPT_GLOBALTALKANIMSPD];
+        game.options[OPT_GLOBALTALKANIMSPD] = 1;
+    }
+    else
+    {
+        play.talkanim_speed = -game.options[OPT_GLOBALTALKANIMSPD] - 1;
+        game.options[OPT_GLOBALTALKANIMSPD] = 0;
+    }
     play.inv_item_wid = 40;
     play.inv_item_hit = 22;
     play.messagetime=-1;
@@ -1103,11 +1103,11 @@ void init_game_settings() {
     play.key_skip_wait = 0;
     play.cur_music_number=-1;
     play.music_repeat=1;
-    play.music_master_volume=160;
+    play.music_master_volume=100 + LegacyMusicMasterVolumeAdjustment;
     play.digital_master_volume = 100;
     play.screen_flipped=0;
     play.offsets_locked=0;
-    play.cant_skip_speech = user_to_internal_skip_speech(game.options[OPT_NOSKIPTEXT]);
+    play.cant_skip_speech = user_to_internal_skip_speech((SkipSpeechStyle)game.options[OPT_NOSKIPTEXT]);
     play.sound_volume = 255;
     play.speech_volume = 255;
     play.normal_font = 0;
@@ -1161,6 +1161,11 @@ void init_game_settings() {
     play.show_single_dialog_option = 0;
     play.keep_screen_during_instant_transition = 0;
     play.read_dialog_option_colour = -1;
+    play.speech_portrait_placement = 0;
+    play.speech_portrait_x = 0;
+    play.speech_portrait_y = 0;
+    play.speech_display_post_time_ms = 0;
+    play.speech_in_post_state = false;
     play.narrator_speech = game.playercharacter;
     play.crossfading_out_channel = 0;
     play.speech_textwindow_gui = game.options[OPT_TWCUSTOM];
@@ -1253,8 +1258,17 @@ void engine_start_multithreaded_audio()
   {
     if (!audioThread.CreateAndStart(update_mp3_thread, true))
     {
+      Out::FPrint("Failed to start audio thread, audio will be processed on the main thread");
       psp_audio_multithreaded = 0;
     }
+    else
+    {
+      Out::FPrint("Audio thread started");
+    }
+  }
+  else
+  {
+    Out::FPrint("Audio is processed on the main thread");
   }
 }
 

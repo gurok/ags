@@ -125,23 +125,6 @@ void GUIMain::WriteToFile(Stream *out)
   out->WriteArrayOfInt32((int32_t*)&objrefptr, MAX_OBJS_ON_GUI);
 }
 
-const char* GUIMain::get_objscript_name(const char *basedOn) {
-  if (basedOn == NULL)
-    basedOn = name;
-
-  if (basedOn[0] == 0) {
-    oNameBuffer[0] = 0;
-  }
-  else {
-    if (strlen(basedOn) > 18)
-      return "";
-    sprintf(oNameBuffer, "g%s", basedOn);
-    strlwr(oNameBuffer);
-    oNameBuffer[1] = toupper(oNameBuffer[1]);
-  }
-  return &oNameBuffer[0];
-}
-
 int GUIMain::is_textwindow() {
   if (vtext[0] == GUI_TEXTWINDOW)
     return 1;
@@ -302,7 +285,7 @@ void GUIMain::draw_at(Common::Bitmap *ds, int xx, int yy)
   SET_EIP(378)
 
   if ((bgpic > 0) && (spriteset[bgpic] != NULL))
-    draw_sprite_compensate(subbmp, bgpic, 0, 0, 0);
+    draw_gui_sprite(subbmp, bgpic, 0, 0, false);
 
   SET_EIP(379)
 

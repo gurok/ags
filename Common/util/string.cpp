@@ -549,16 +549,13 @@ void String::Empty()
 
 void String::FillString(char c, int count)
 {
+    Empty();
     if (count > 0)
     {
         ReserveAndShift(false, count);
         memset(_meta->CStr, c, count);
         _meta->Length = count;
         _meta->CStr[count] = 0;
-    }
-    else
-    {
-        Empty();
     }
 }
 
@@ -568,7 +565,7 @@ void String::Format(const char *fcstr, ...)
     va_list argptr;
     va_start(argptr, fcstr);
     int length = vsnprintf(NULL, 0, fcstr, argptr);
-    ReserveAndShift(false, length);
+    ReserveAndShift(false, Math::Max(0, length - GetLength()));
     va_start(argptr, fcstr);
     vsprintf(_meta->CStr, fcstr, argptr);
     _meta->Length = length;
@@ -653,7 +650,7 @@ void String::SetString(const char *cstr, int length)
         length = length >= 0 ? Math::Min(length, strlen(cstr)) : strlen(cstr);
         if (length > 0)
         {
-            ReserveAndShift(false, length);
+            ReserveAndShift(false, Math::Max(0, length - GetLength()));
             memcpy(_meta->CStr, cstr, length);
             _meta->Length = length;
             _meta->CStr[length] = 0;
@@ -898,11 +895,15 @@ void String::ReserveAndShift(bool left, int more_length)
     if (_meta)
     {
         int total_length = _meta->Length + more_length;
-        if (_meta->RefCount > 1 || (_meta->Capacity < total_length))
+        if (_meta->Capacity < total_length)
         {
             // grow by 50% or at least to total_size
             int grow_length = _meta->Capacity + (_meta->Capacity >> 1);
             Copy(Math::Max(total_length, grow_length), left ? more_length : 0);
+        }
+        else if (_meta->RefCount > 1)
+        {
+            Copy(total_length, left ? more_length : 0);
         }
         else
         {

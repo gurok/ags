@@ -29,6 +29,7 @@
 #include "ac/overlay.h"
 #include "ac/record.h"
 #include "ac/screenoverlay.h"
+#include "ac/speech.h"
 #include "ac/string.h"
 #include "ac/topbarsettings.h"
 #include "debug/debug_log.h"
@@ -176,7 +177,13 @@ int _display_main(int xx,int yy,int wii,char*todis,int blocking,int usingfont,in
         }
 
         if (drawBackground)
+        {
             draw_text_window_and_bar(&text_window_ds, wantFreeScreenop, &ttxleft, &ttxtop, &xx, &yy, &wii, &text_color, 0, usingGui);
+            if (usingGui > 0)
+            {
+                alphaChannel = guis[usingGui].is_alpha();
+            }
+        }
         else if ((ShouldAntiAliasText()) && (GameResolution.ColorDepth >= 24))
             alphaChannel = true;
 
@@ -247,7 +254,7 @@ int _display_main(int xx,int yy,int wii,char*todis,int blocking,int usingfont,in
         // 3 = only on keypress, no auto timer
         // 4 = mouse only
         int countdown = GetTextDisplayTime (todis);
-        int skip_setting = user_to_internal_skip_speech(play.skip_display);
+        int skip_setting = user_to_internal_skip_speech((SkipSpeechStyle)play.skip_display);
         while (1) {
             timerloop = 0;
             NEXT_ITERATION();
@@ -481,13 +488,16 @@ int wgettextwidth_compensate(const char *tex, int font) {
     return wdof;
 }
 
-void do_corner(Bitmap *ds, int sprn,int xx1,int yy1,int typx,int typy) {
+void do_corner(Bitmap *ds, int sprn, int x, int y, int offx, int offy) {
     if (sprn<0) return;
-    Bitmap *thisone = spriteset[sprn];
-    if (thisone == NULL)
-        thisone = spriteset[0];
+    if (spriteset[sprn] == NULL)
+    {
+        sprn = 0;
+    }
 
-    AGS::Engine::GfxUtil::DrawSpriteWithTransparency(ds, thisone, xx1+typx*spritewidth[sprn],yy1+typy*spriteheight[sprn]);
+    x = x + offx * spritewidth[sprn];
+    y = y + offy * spriteheight[sprn];
+    draw_gui_sprite_v330(ds, sprn, x, y);
 }
 
 int get_but_pic(GUIMain*guo,int indx) {
@@ -547,7 +557,7 @@ void draw_button_background(Bitmap *ds, int xx1,int yy1,int xx2,int yy2,GUIMain*
                     bgoffsy = bgoffsyStart;
                     while (bgoffsy <= bgfinishy)
                     {
-                        wputblock(ds, bgoffsx, bgoffsy, spriteset[iep->bgpic], 0);
+                        draw_gui_sprite_v330(ds, iep->bgpic, bgoffsx, bgoffsy);
                         bgoffsy += spriteheight[iep->bgpic];
                     }
                     bgoffsx += spritewidth[iep->bgpic];
