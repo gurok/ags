@@ -75,6 +75,10 @@ void INIgetdirec(char *wasgv, char *inifil) {
 
 }
 
+//
+// TODO: replace all this with proper INI reader!
+//
+
 char *INIreaditem(const char *sectn, const char *entry) {
     Stream *fin = Common::File::OpenFileRead(filetouse);
     if (fin == NULL)
@@ -123,6 +127,12 @@ char *INIreaditem(const char *sectn, const char *entry) {
     return NULL;
 }
 
+//
+// FIXME: INIreadint returns -1 instead of default value when entry
+// is not found; before fixing this we must ensure that this change
+// won't break any initializations.
+//
+
 int INIreadint (const char *sectn, const char *item, int errornosect = 1) {
     char *tempstr = INIreaditem (sectn, item);
     if (tempstr == NULL)
@@ -131,6 +141,17 @@ int INIreadint (const char *sectn, const char *item, int errornosect = 1) {
     int toret = atoi(tempstr);
     free (tempstr);
     return toret;
+}
+
+String INIreadstring(const char *sectn, const char *entry)
+{
+    char *tempstr = INIreaditem(sectn, entry);
+    String str = tempstr;
+    if (tempstr)
+    {
+        free(tempstr);
+    }
+    return str;
 }
 
 void read_config_file(char *argv0) {
@@ -236,7 +257,7 @@ void read_config_file(char *argv0) {
         else
             usetup.no_speech_pack = 0;
 
-        usetup.data_files_dir = INIreaditem("misc","datadir");
+        usetup.data_files_dir = INIreadstring("misc","datadir");
         if (usetup.data_files_dir.IsEmpty())
             usetup.data_files_dir = ".";
         // strip any trailing slash
@@ -251,7 +272,7 @@ void read_config_file(char *argv0) {
 #else
         usetup.data_files_dir.TrimRight('/');
 #endif
-        usetup.main_data_filename = INIreaditem ("misc", "datafile");
+        usetup.main_data_filename = INIreadstring ("misc", "datafile");
 
 #if defined(IOS_VERSION) || defined(PSP_VERSION) || defined(ANDROID_VERSION)
         // PSP: No graphic filters are available.
@@ -268,7 +289,26 @@ void read_config_file(char *argv0) {
 
         usetup.screen_size.Width = INIreadint("misc", "screenwidth", 0);
         usetup.screen_size.Height = INIreadint("misc", "screenheight", 0);
-        usetup.drawing_place = (RenderFramePlacement)INIreadint("misc", "renderstyle", kRenderPlaceResizeWindow);
+
+        const char *render_style_str[kNumRenderPlaceTypes] = {
+            "center",
+            "stretch",
+            "proportional",
+            "resizewindow"
+        };
+        usetup.drawing_place = kRenderPlaceResizeWindow;
+        String render_style = INIreadstring("misc", "renderstyle");
+        if (!render_style.IsEmpty())
+        {
+            for (int i = 0; i < kNumRenderPlaceTypes; ++i)
+            {
+                if (render_style.CompareNoCase(render_style_str[i]) == 0)
+                {
+                    usetup.drawing_place = (RenderFramePlacement)i;
+                    break;
+                }
+            }
+        }
         // FIXME!!!!!!!!!
         // [IKM] temporary dirty hack until INI file reader is fixed;
         // I don't fix it right now, because that will require careful testing of all
@@ -277,8 +317,6 @@ void read_config_file(char *argv0) {
             usetup.screen_size.Width = 0;
         if (usetup.screen_size.Height < 0)
             usetup.screen_size.Height = 0;
-        if (usetup.drawing_place < 0)
-            usetup.drawing_place = kRenderPlaceResizeWindow;
 
         usetup.translation = INIreaditem ("language", "translation");
 

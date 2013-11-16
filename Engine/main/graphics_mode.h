@@ -26,7 +26,8 @@ enum RenderFramePlacement
     kRenderPlaceCenter,
     kRenderPlaceStretch,
     kRenderPlaceStretchProportional,
-    kRenderPlaceResizeWindow
+    kRenderPlaceResizeWindow,
+    kNumRenderPlaceTypes
 };
 
 int graphics_mode_init();
