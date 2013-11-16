@@ -289,12 +289,13 @@ int engine_init_screen_settings(Size &screen_size, Placement &drawing_place, Col
         return res;
     }
 
-    drawing_place = kPlaceStretch;
     if (usetup.drawing_place == kRenderPlaceResizeWindow)
     {
         screen_size.Width = GameSize.Width;
         screen_size.Height = GameSize.Height;
         gfxFilter->GetRealResolution(&screen_size.Width, &screen_size.Height);
+        // We are not allowed to stretch more than user requested (by setting gfx filter)
+        drawing_place = kPlaceCenter;
     }
     else
     {
@@ -306,6 +307,9 @@ int engine_init_screen_settings(Size &screen_size, Placement &drawing_place, Col
             break;
         case kRenderPlaceStretchProportional:
             drawing_place = kPlaceStretchProportional;
+            break;
+        default:
+            drawing_place = kPlaceStretch;
             break;
         }
     }
@@ -494,10 +498,10 @@ void create_gfx_driver()
 
 bool init_gfx_mode(const Size screen_size, const Placement drawing_place, const int color_depth)
 {
-    GameResolution.ColorDepth = color_depth;
+    Out::FPrint("Trying to set gfx mode to %d x %d (%d-bit) %s",
+        screen_size.Width, screen_size.Height, color_depth, usetup.windowed > 0 ? "windowed" : "fullscreen");
 
-    Out::FPrint("Attempt to switch gfx mode to %d x %d (%d-bit)",
-        screen_size.Width, screen_size.Height, GameResolution.ColorDepth);
+    GameResolution.ColorDepth = color_depth;
 
     if (usetup.refresh >= 50)
     {
@@ -533,6 +537,7 @@ bool find_nearest_supported_mode(Size &wanted_size, const int color_depth)
     IGfxModeList *modes = gfxDriver->GetSupportedModeList(color_depth);
     if (!modes)
     {
+        Out::FPrint("Couldn't get a list of supported resolutions");
         return false;
     }
     
@@ -580,12 +585,12 @@ bool find_nearest_supported_mode(Size &wanted_size, const int color_depth)
         wanted_size.Height = nearest_height;
         return true;
     }
+    Out::FPrint("Couldn't find acceptable supported resolution");
     return false;
 }
 
 bool try_init_gfx_mode(const Size screen_size, const Placement drawing_place, const int color_depth)
 {
-    Out::FPrint("Trying gfx mode %d x %d (%d-bit) %s", screen_size.Width, screen_size.Height, color_depth, usetup.windowed > 0 ? "windowed" : "fullscreen");
     bool success = init_gfx_mode(screen_size, drawing_place, color_depth);
     if (!success)
     {
@@ -593,12 +598,7 @@ bool try_init_gfx_mode(const Size screen_size, const Placement drawing_place, co
         Size fixed_screen_size = screen_size;
         if (find_nearest_supported_mode(fixed_screen_size, color_depth))
         {
-            Out::FPrint("Trying gfx mode %d x %d (%d-bit)", fixed_screen_size.Width, fixed_screen_size.Height, color_depth);
             success = init_gfx_mode(fixed_screen_size, drawing_place, color_depth);
-        }
-        else
-        {
-            Out::FPrint("Couldn't get a list of supported resolutions");
         }
     }
     return success;
