@@ -241,14 +241,11 @@ void read_config_file(char *argv0) {
         usetup.refresh = INIreadint ("misc", "refresh", 0);
         usetup.enable_antialiasing = INIreadint ("misc", "antialias", 0);
         usetup.force_hicolor_mode = INIreadint("misc", "notruecolor", 0);
-        usetup.enable_side_borders = INIreadint("misc", "sideborders", 0);
 
         if (usetup.enable_antialiasing < 0)
             usetup.enable_antialiasing = 0;
         if (usetup.force_hicolor_mode < 0)
             usetup.force_hicolor_mode = 0;
-        if (usetup.enable_side_borders < 0)
-            usetup.enable_side_borders = 1;
 
         // This option is backwards (usevox is 0 if no_speech_pack)
         usetup.no_speech_pack = INIreadint ("sound", "usespeech", 0);
@@ -309,6 +306,7 @@ void read_config_file(char *argv0) {
                 }
             }
         }
+        usetup.match_desktop_ratio = INIreadint("misc", "match_desktop_ratio", 0);
         // FIXME!!!!!!!!!
         // [IKM] temporary dirty hack until INI file reader is fixed;
         // I don't fix it right now, because that will require careful testing of all
@@ -317,6 +315,8 @@ void read_config_file(char *argv0) {
             usetup.screen_size.Width = 0;
         if (usetup.screen_size.Height < 0)
             usetup.screen_size.Height = 0;
+        if (usetup.match_desktop_ratio < 0)
+            usetup.match_desktop_ratio = 0;
 
         usetup.translation = INIreaditem ("language", "translation");
 

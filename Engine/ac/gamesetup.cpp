@@ -25,7 +25,6 @@ GameSetup::GameSetup()
     enable_antialiasing = 0;
     force_hicolor_mode = 0;
     disable_exception_handling = 0;
-    enable_side_borders = 1;
     base_width = 320;
     base_height = 200;
     gfxFilterID = NULL;

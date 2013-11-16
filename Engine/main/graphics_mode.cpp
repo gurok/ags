@@ -160,10 +160,34 @@ void adjust_sizes_for_resolution(int filever)
 }
 
 int engine_init_gfx_filters(int color_depth);
+bool find_nearest_supported_mode(Size &wanted_size, const int color_depth, const Size *ratio_reference = NULL);
+
+void apply_window_aspect_ratio(Size &screen_size, int color_depth)
+{
+    // Apply extra horizontal and/or vertical borders, referring to the current
+    // desktop resolution ratio.
+    if (!usetup.windowed && usetup.match_desktop_ratio)
+    {
+        Size desktop_size;
+        if (get_desktop_resolution(&desktop_size.Width, &desktop_size.Height) == 0)
+        {
+            Size fixed_screen_size = screen_size;
+            if (find_nearest_supported_mode(fixed_screen_size, color_depth, &desktop_size))
+            {
+                screen_size = fixed_screen_size;
+            }
+        }
+        else
+        {
+            Out::FPrint("Automatic borders disabled (unable to obtain desktop resolution)");
+        }
+    }
+}
 
 int engine_init_screen_settings(Size &screen_size, Placement &drawing_place, ColorDepthOption &color_depths)
 {
     Out::FPrint("Initializing screen settings");
+    pre_create_gfx_driver(NULL);
 
     // default shifts for how we store the sprite data
 
@@ -314,6 +338,7 @@ int engine_init_screen_settings(Size &screen_size, Placement &drawing_place, Col
         }
     }
 
+    apply_window_aspect_ratio(screen_size, color_depths.First);
     adjust_sizes_for_resolution(loaded_game_file_version);
     return RETURN_CONTINUE;
 }
@@ -424,7 +449,6 @@ int find_max_supported_uniform_multiplier(const Size &base_size, const int color
 String get_maximal_supported_scaling_filter(int color_depth)
 {
     Out::FPrint("Detecting maximal supported scaling");
-    pre_create_gfx_driver(NULL);
     String gfxfilter = "None";
 
     const int max_scaling = 8; // we support up to x8 scaling now
@@ -532,13 +556,19 @@ bool init_gfx_mode(const Size screen_size, const Placement drawing_place, const 
     return success;
 }
 
-bool find_nearest_supported_mode(Size &wanted_size, const int color_depth)
+bool find_nearest_supported_mode(Size &wanted_size, const int color_depth, const Size *ratio_reference)
 {
     IGfxModeList *modes = gfxDriver->GetSupportedModeList(color_depth);
     if (!modes)
     {
         Out::FPrint("Couldn't get a list of supported resolutions");
         return false;
+    }
+
+    int wanted_ratio = 0;
+    if (ratio_reference)
+    {
+        wanted_ratio = (ratio_reference->Height << 10) / ratio_reference->Width;
     }
     
     int nearest_width = 0;
@@ -556,6 +586,15 @@ bool find_nearest_supported_mode(Size &wanted_size, const int color_depth)
         if (mode.ColorDepth != color_depth)
         {
             continue;
+        }
+
+        if (wanted_ratio > 0)
+        {
+            int mode_ratio = (mode.Height << 10) / mode.Width;
+            if (mode_ratio != wanted_ratio)
+            {
+                continue;
+            }
         }
         if (mode.Width == wanted_size.Width && mode.Height == wanted_size.Height)
         {
@@ -595,8 +634,20 @@ bool try_init_gfx_mode(const Size screen_size, const Placement drawing_place, co
     if (!success)
     {
         Out::FPrint("Attempting to find nearest supported resolution");
+        Size desktop_size;
         Size fixed_screen_size = screen_size;
-        if (find_nearest_supported_mode(fixed_screen_size, color_depth))
+        bool mode_found = false;
+        if (usetup.windowed == 0 && usetup.match_desktop_ratio &&
+            get_desktop_resolution(&desktop_size.Width, &desktop_size.Height))
+        {
+            mode_found = find_nearest_supported_mode(fixed_screen_size, color_depth, &desktop_size);
+        }
+        else
+        {
+            mode_found = find_nearest_supported_mode(fixed_screen_size, color_depth);
+        }
+
+        if (mode_found)
         {
             success = init_gfx_mode(fixed_screen_size, drawing_place, color_depth);
         }
