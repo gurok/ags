@@ -562,6 +562,11 @@ void OGLGraphicsDriver::Vsync()
 
 bool OGLGraphicsDriver::IsModeSupported(int width, int height, int colDepth)
 {
+  if (width <= 0 || height <= 0 || colDepth <= 0)
+  {
+    set_allegro_error("Invalid resolution parameters: %d x %d x %d", width, height, colDepth);
+    return false;
+  }
   return true;
 }
 

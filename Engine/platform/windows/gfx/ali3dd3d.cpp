@@ -627,6 +627,12 @@ static int d3d_format_to_color_depth(D3DFORMAT format, bool secondary)
 
 bool D3DGraphicsDriver::IsModeSupported(int width, int height, int colDepth)
 {
+  if (width <= 0 || height <= 0 || colDepth <= 0)
+  {
+    set_allegro_error("Invalid resolution parameters: %d x %d x %d", width, height, colDepth);
+    return false;
+  }
+
   if (_newmode_windowed)
   {
     return true;

@@ -261,6 +261,11 @@ private:
 
 bool ALSoftwareGraphicsDriver::IsModeSupported(int driver, int width, int height, int colDepth)
 {
+  if (width <= 0 || height <= 0 || colDepth <= 0)
+  {
+    set_allegro_error("Invalid resolution parameters: %d x %d x %d", width, height, colDepth);
+    return false;
+  }
 #if defined(ANDROID_VERSION) || defined(PSP_VERSION) || defined(IOS_VERSION)
   // Everything is drawn to a virtual screen, so all resolutions are supported.
   return true;

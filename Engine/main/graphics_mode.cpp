@@ -31,6 +31,7 @@
 #include "gui/guiinv.h"
 #include "gui/guimain.h"
 #include "main/graphics_mode.h"
+#include "main/main_allegro.h"
 #include "platform/base/agsplatformdriver.h"
 #include "gfx/graphicsdriver.h"
 #include "gfx/bitmap.h"
@@ -160,7 +161,58 @@ void adjust_sizes_for_resolution(int filever)
 }
 
 int engine_init_gfx_filters(int color_depth);
-bool find_nearest_supported_mode(Size &wanted_size, const int color_depth, const Size *ratio_reference = NULL);
+bool find_nearest_supported_mode(Size &wanted_size, const int color_depth, const Size *ratio_reference = NULL, bool ignore_given_size = false);
+void pre_create_gfx_driver(GFXFilter *set_filter);
+
+bool get_desktop_size_for_windowed_mode(Size &size)
+{
+    if (get_desktop_resolution(&size.Width, &size.Height) == 0)
+    {
+        // TODO: a platform-specific way to do this?
+        size.Height -= 32; // give some space for window borders
+        return true;
+    }
+    return false;
+}
+
+void setup_render_frame(Size &screen_size, Placement &drawing_place)
+{
+    Size filtered_game_size = GameSize;
+    gfxFilter->GetRealResolution(&filtered_game_size.Width, &filtered_game_size.Height);
+
+    if (usetup.drawing_place == kRenderPlaceResizeWindow)
+    {
+        screen_size = filtered_game_size;
+        // We are not allowed to stretch more than user requested (by setting gfx filter)
+        drawing_place = kPlaceCenter;
+    }
+    else
+    {
+        screen_size = usetup.screen_size;
+        // If the configuration did not define proper screen size, use the scaled game size instead
+        if (screen_size.Width <= 0)
+        {
+            screen_size.Width = filtered_game_size.Width;
+        }
+        if (screen_size.Height <= 0)
+        {
+            screen_size.Height = filtered_game_size.Height;
+        }
+
+        switch (usetup.drawing_place)
+        {
+        case kRenderPlaceCenter:
+            drawing_place = kPlaceCenter;
+            break;
+        case kRenderPlaceStretchProportional:
+            drawing_place = kPlaceStretchProportional;
+            break;
+        default:
+            drawing_place = kPlaceStretch;
+            break;
+        }
+    }
+}
 
 void apply_window_aspect_ratio(Size &screen_size, int color_depth)
 {
@@ -313,31 +365,7 @@ int engine_init_screen_settings(Size &screen_size, Placement &drawing_place, Col
         return res;
     }
 
-    if (usetup.drawing_place == kRenderPlaceResizeWindow)
-    {
-        screen_size.Width = GameSize.Width;
-        screen_size.Height = GameSize.Height;
-        gfxFilter->GetRealResolution(&screen_size.Width, &screen_size.Height);
-        // We are not allowed to stretch more than user requested (by setting gfx filter)
-        drawing_place = kPlaceCenter;
-    }
-    else
-    {
-        screen_size = usetup.screen_size;
-        switch (usetup.drawing_place)
-        {
-        case kRenderPlaceCenter:
-            drawing_place = kPlaceCenter;
-            break;
-        case kRenderPlaceStretchProportional:
-            drawing_place = kPlaceStretchProportional;
-            break;
-        default:
-            drawing_place = kPlaceStretch;
-            break;
-        }
-    }
-
+    setup_render_frame(screen_size, drawing_place);
     apply_window_aspect_ratio(screen_size, color_depths.First);
     adjust_sizes_for_resolution(loaded_game_file_version);
     return RETURN_CONTINUE;
@@ -466,14 +494,11 @@ String get_maximal_supported_scaling_filter(int color_depth)
     else
     {
         // Do not try to create windowed mode larger than current desktop resolution
-        int desktop_width;
-        int desktop_height;
-        if (get_desktop_resolution(&desktop_width, &desktop_height) == 0)
+        Size desktop_size;
+        if (get_desktop_size_for_windowed_mode(desktop_size))
         {
-            desktop_height -= 32; // give some space for window borders
-            // TODO: a platform-specific way to do this?
-            int xratio = desktop_width / GameSize.Width;
-            int yratio = desktop_height / GameSize.Height;
+            int xratio = desktop_size.Width / GameSize.Width;
+            int yratio = desktop_size.Height / GameSize.Height;
             int selected_scaling = Math::Min(Math::Min(xratio, yratio), max_scaling);
             gfxfilter.Format("StdScale%d", selected_scaling);
         }
@@ -541,8 +566,22 @@ bool init_gfx_mode(const Size screen_size, const Placement drawing_place, const 
         set_color_depth(GameResolution.ColorDepth);
     }
 
+    // Last moment fixups
+    Placement using_placement = drawing_place;
+    // If the filtered game size appear larger than the window,
+    // do not apply a "centered" style, use "proportional stretch" instead
+    if (using_placement == kPlaceCenter)
+    {
+        Size filtered_game_size = GameSize;
+        gfxFilter->GetRealResolution(&filtered_game_size.Width, &filtered_game_size.Height);
+        if (filtered_game_size.ExceedsByAny(screen_size))
+        {
+            using_placement = kPlaceStretchProportional;
+        }
+    }
+
     bool success =
-        gfxDriver->Init(GameSize.Width, GameSize.Height, screen_size.Width, screen_size.Height, drawing_place,
+        gfxDriver->Init(GameSize.Width, GameSize.Height, screen_size.Width, screen_size.Height, using_placement,
                          GameResolution.ColorDepth, usetup.windowed > 0, &timerloop);
     if (success)
     {
@@ -551,12 +590,12 @@ bool init_gfx_mode(const Size screen_size, const Placement drawing_place, const 
     }
     else
     {
-        Out::FPrint("Failed, resolution not supported");
+        Out::FPrint("Failed. %s", get_allegro_error());
     }
     return success;
 }
 
-bool find_nearest_supported_mode(Size &wanted_size, const int color_depth, const Size *ratio_reference)
+bool find_nearest_supported_mode(Size &wanted_size, const int color_depth, const Size *ratio_reference, bool ignore_given_size)
 {
     IGfxModeList *modes = gfxDriver->GetSupportedModeList(color_depth);
     if (!modes)
@@ -596,7 +635,7 @@ bool find_nearest_supported_mode(Size &wanted_size, const int color_depth, const
                 continue;
             }
         }
-        if (mode.Width == wanted_size.Width && mode.Height == wanted_size.Height)
+        if (!ignore_given_size && mode.Width == wanted_size.Width && mode.Height == wanted_size.Height)
         {
             return true;
         }
@@ -633,18 +672,40 @@ bool try_init_gfx_mode(const Size screen_size, const Placement drawing_place, co
     bool success = init_gfx_mode(screen_size, drawing_place, color_depth);
     if (!success)
     {
+        // Try to find nearest compatible mode and init that
         Out::FPrint("Attempting to find nearest supported resolution");
         Size desktop_size;
         Size fixed_screen_size = screen_size;
         bool mode_found = false;
-        if (usetup.windowed == 0 && usetup.match_desktop_ratio &&
-            get_desktop_resolution(&desktop_size.Width, &desktop_size.Height))
+
+        // Fullscreen mode
+        if (usetup.windowed == 0)
         {
-            mode_found = find_nearest_supported_mode(fixed_screen_size, color_depth, &desktop_size);
+            if (usetup.match_desktop_ratio &&
+                get_desktop_resolution(&desktop_size.Width, &desktop_size.Height))
+            {
+                mode_found = find_nearest_supported_mode(fixed_screen_size, color_depth, &desktop_size, true);
+            }
+            else
+            {
+                mode_found = find_nearest_supported_mode(fixed_screen_size, color_depth, NULL, true);
+            }
         }
+        // Windowed mode
         else
         {
-            mode_found = find_nearest_supported_mode(fixed_screen_size, color_depth);
+            // If windowed mode, make the resolution stay in the generally supported limits
+            // TODO: platform/driver specific values?
+            const Size minimal_size(128, 128);
+            if (!get_desktop_size_for_windowed_mode(desktop_size))
+            {
+                desktop_size = screen_size;
+            }
+            if (screen_size.ExceedsByAny(desktop_size) || minimal_size.ExceedsByAny(screen_size))
+            {
+                fixed_screen_size.Clamp(minimal_size, desktop_size);
+                mode_found = true;
+            }
         }
 
         if (mode_found)

@@ -18,6 +18,10 @@
 #ifndef __AGS_CN_UTIL__GEOMETRY_H
 #define __AGS_CN_UTIL__GEOMETRY_H
 
+#include "util/math.h"
+
+namespace Math = AGS::Common::Math;
+
 //namespace AGS
 //{
 //namespace Common
@@ -81,6 +85,30 @@ struct Size
     {
         Width = width;
         Height = height;
+    }
+
+    inline void Clamp(const Size floor, const Size ceil)
+    {
+        Width = Math::Clamp(floor.Width, ceil.Width, Width);
+        Height = Math::Clamp(floor.Height, ceil.Height, Height);
+    }
+
+    // Indicates if current size exceeds other size by any metric
+    inline bool ExceedsByAny(const Size size) const
+    {
+        return Width > size.Width || Height > size.Height;
+    }
+
+    // Indicates if current size exceeds other side by both metrics
+    inline bool ExceedsByBoth(const Size size) const
+    {
+        return Width > size.Width && Height > size.Height;
+    }
+
+    inline void Intersect(const Size size)
+    {
+        Width = Math::Min(size.Width, Width);
+        Height = Math::Min(size.Height, Height);
     }
 
     inline bool operator==(const Size size) const
