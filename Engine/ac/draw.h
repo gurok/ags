@@ -82,6 +82,7 @@ void putpixel_compensate (Common::Bitmap *g, int xx,int yy, int col);
 // returns 1 if nothing at all has changed and actsps is still
 // intact from last time; 0 otherwise
 int construct_object_gfx(int aa, int *drawnWidth, int *drawnHeight, bool alwaysUseSoftware);
+// TODO: check if this is still needed and works properly
 void clear_letterbox_borders();
 
 void draw_and_invalidate_text(Common::Bitmap *ds, int x1, int y1, int font, color_t text_color, const char *text);

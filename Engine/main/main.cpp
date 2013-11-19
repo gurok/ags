@@ -186,7 +186,6 @@ void main_print_help() {
            "-windowed            Set display mode to windowed\n"
            "-fullscreen          Set display mode to fullscreen\n"
            "-hicolor             Enable 16bit colors\n"
-           "-letterbox           Enable letterbox mode\n"
            "-gfxfilter <filter>  Enable graphics filter, where <filter> can be\n"
            "                     StdScale2, StdScale3, StdScale4, Hq2x or Hq3x\n"
            "--help               Print this help message\n");

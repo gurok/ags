@@ -14,7 +14,6 @@ namespace AGS.Types
         public const string PROPERTY_RESOLUTION = "Resolution";
         public const string PROPERTY_SCALE_FONTS = "Fonts designed for 640x480";
 		public const string PROPERTY_ANTI_ALIAS_FONTS = "Anti-alias TTF fonts";
-        public const string PROPERTY_LETTERBOX_MODE = "Enable letterbox mode";
 		public const string REGEX_FOUR_PART_VERSION = @"^(\d+)\.(\d+)\.(\d+)\.(\d+)$";
 
 		private const string DEFAULT_GENRE = "Adventure";
@@ -35,7 +34,6 @@ namespace AGS.Types
         private InterfaceDisabledAction _whenInterfaceDisabled = InterfaceDisabledAction.GreyOut;
         private bool _pixelPerfect = true;
         private bool _autoMoveInWalkMode = true;
-        private bool _letterboxMode = false;
         private int _splitResources = 0;
         private bool _turnBeforeWalking = true;
         private bool _turnBeforeFacing = true;
@@ -240,14 +238,12 @@ namespace AGS.Types
             set { _splitResources = value; }
         }
 
-        [DisplayName("Enable letterbox mode")]
-        [Description("Game will run at 320x240 or 640x480 with top and bottom black borders to give a square aspect ratio")]
-        [DefaultValue(false)]
-        [Category("Visual")]
+        [Browsable(false)]
+        [Obsolete("LetterboxMode is deprecated, the display modes are meant to be set in the runtime game configuration.")]
         public bool LetterboxMode
         {
-            get { return _letterboxMode; }
-            set { _letterboxMode = value; }
+            get;
+            set;
         }
 
         [DisplayName("Automatically move the player in Walk mode")]
@@ -938,13 +934,6 @@ namespace AGS.Types
                     ((property.Name == "InventoryHotspotMarkerDotColor") ||
                      (property.Name == "InventoryHotspotMarkerCrosshairColor")))
                 {
-                    wantThisProperty = false;
-                }
-                else if ((_resolution != GameResolutions.R320x200) && 
-                         (_resolution != GameResolutions.R640x400) &&
-                         (property.Name == "LetterboxMode"))
-                {
-                    // Only show letterbox option for 320x200 and 640x400 games
                     wantThisProperty = false;
                 }
                 else if ((property.Name == "GlobalSpeechAnimationDelay") && (!UseGlobalSpeechAnimationDelay))
