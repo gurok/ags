@@ -802,7 +802,7 @@ int D3DGraphicsDriver::_initDLLCallback()
   d3dpp.Flags = 0;
   d3dpp.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
   d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE; //D3DPRESENT_INTERVAL_DEFAULT;
-  d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+  //d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
   /* If full screen, specify the refresh rate */
   if ((d3dpp.Windowed == FALSE) && (_newmode_refresh > 0))
     d3dpp.FullScreen_RefreshRateInHz = _newmode_refresh;
