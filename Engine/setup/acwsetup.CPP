@@ -346,7 +346,7 @@ void InitializeDialog(HWND hDlg) {
   wheight = winsize.bottom - winsize.top;
 
   base_height = MulDiv(112, HIWORD(GetDialogBaseUnits()), 8);
-  MoveWindow (hDlg, winsize.left, winsize.top + (wheight - base_height) / 2, wwidth, base_height, TRUE);
+  MoveWindow (hDlg, max(0, winsize.left), max(0, winsize.top + (wheight - base_height) / 2), wwidth, base_height, TRUE);
   update_resolution_texts (hDlg);
 
   SendMessage(hDlg, WM_SETTEXT, NULL, (LPARAM)gameNameForTitleBar);
@@ -386,7 +386,7 @@ LRESULT CALLBACK callback_settings(HWND hDlg, UINT message, WPARAM wParam, LPARA
         ShowWindow (GetDlgItem(hDlg, IDC_VSYNC), SW_SHOW);
         ShowWindow (GetDlgItem(hDlg, IDC_COMBO4), SW_SHOW);
 
-        MoveWindow (hDlg, winsize.left, winsize.top - (wheight - base_height) / 2, wwidth, wheight, TRUE);
+        MoveWindow (hDlg, max(0, winsize.left), max(0, winsize.top - (wheight - base_height) / 2), wwidth, wheight, TRUE);
         //SetActiveWindow (GetDlgItem(hDlg, IDOK));
         SetFocus (GetDlgItem(hDlg, IDOK));
       }
