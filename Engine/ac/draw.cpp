@@ -1474,10 +1474,12 @@ int scale_and_flip_sprite(int useindx, int coldept, int zoom_level,
 // intact from last time; 0 otherwise
 int construct_object_gfx(int aa, int *drawnWidth, int *drawnHeight, bool alwaysUseSoftware) {
     int useindx = aa;
-    bool hardwareAccelerated = gfxDriver->HasAcceleratedStretchAndFlip();
+    bool hardwareAccelerated;
 
     if (alwaysUseSoftware)
         hardwareAccelerated = false;
+    else
+        hardwareAccelerated = gfxDriver->HasAcceleratedStretchAndFlip();
 
     if (spriteset[objs[aa].num] == NULL)
         quitprintf("There was an error drawing object %d. Its current sprite, %d, is invalid.", aa, objs[aa].num);
@@ -1655,7 +1657,7 @@ int construct_object_gfx(int aa, int *drawnWidth, int *drawnHeight, bool alwaysU
 
 // This is only called from draw_screen_background, but it's seperated
 // to help with profiling the program
-void prepare_objects_for_drawing() {
+void prepare_objects_for_drawing(bool alwaysUseSoftware) {
     int aa,atxp,atyp,useindx;
     our_eip=32;
 
@@ -1668,7 +1670,7 @@ void prepare_objects_for_drawing() {
         useindx = aa;
         int tehHeight;
 
-        int actspsIntact = construct_object_gfx(aa, NULL, &tehHeight, false);
+        int actspsIntact = construct_object_gfx(aa, NULL, &tehHeight, alwaysUseSoftware);
 
         // update the cache for next time
         objcache[aa].xwas = objs[aa].x;
@@ -1779,10 +1781,16 @@ void tint_image (Bitmap *ds, Bitmap *srcimg, int red, int grn, int blu, int ligh
 
 
 
-void prepare_characters_for_drawing() {
+void prepare_characters_for_drawing(bool alwaysUseSoftware) {
     int zoom_level,newwidth,newheight,onarea,sppic,atxp,atyp,useindx;
     int light_level,coldept,aa;
     int tint_red, tint_green, tint_blue, tint_amount, tint_light = 255;
+    bool hardwareAccelerated;
+
+    if (alwaysUseSoftware)
+        hardwareAccelerated = false;
+    else
+        hardwareAccelerated = gfxDriver->HasAcceleratedStretchAndFlip();
 
     our_eip=33;
     // draw characters
@@ -1890,7 +1898,7 @@ void prepare_characters_for_drawing() {
         }
         else if ((charcache[aa].inUse) && 
             (charcache[aa].sppic == specialpic) &&
-            (gfxDriver->HasAcceleratedStretchAndFlip()))
+            (hardwareAccelerated))
         {
             usingCachedImage = true;
         }
@@ -1937,7 +1945,7 @@ void prepare_characters_for_drawing() {
             // create the base sprite in actsps[useindx], which will
             // be scaled and/or flipped, as appropriate
             int actspsUsed = 0;
-            if (!gfxDriver->HasAcceleratedStretchAndFlip())
+            if (!hardwareAccelerated)
             {
                 actspsUsed = scale_and_flip_sprite(
                     useindx, coldept, zoom_level, sppic,
@@ -1952,7 +1960,7 @@ void prepare_characters_for_drawing() {
             our_eip = 335;
 
             if (((light_level != 0) || (tint_amount != 0)) &&
-                (!gfxDriver->HasAcceleratedStretchAndFlip())) {
+                (!hardwareAccelerated)) {
                     // apply the lightening or tinting
                     Bitmap *comeFrom = NULL;
                     // if possible, direct read from the source image
@@ -2009,7 +2017,7 @@ void prepare_characters_for_drawing() {
             actspsbmp[useindx] = recycle_ddb_bitmap(actspsbmp[useindx], actsps[useindx], hasAlpha);
         }
 
-        if (gfxDriver->HasAcceleratedStretchAndFlip()) 
+        if (hardwareAccelerated) 
         {
             actspsbmp[useindx]->SetStretch(newwidth, newheight);
             actspsbmp[useindx]->SetFlippedLeftRight(isMirrored != 0);
@@ -2047,7 +2055,7 @@ void prepare_characters_for_drawing() {
 
 // draw_screen_background: draws the background scene, all the interfaces
 // and objects; basically, the entire screen
-void draw_screen_background(Bitmap *ds) {
+void draw_screen_background(Bitmap *ds, bool alwaysUseSoftware) {
 
     static int offsetxWas = -100, offsetyWas = -100;
 
@@ -2116,9 +2124,9 @@ void draw_screen_background(Bitmap *ds) {
 
     if ((debug_flags & DBG_NOOBJECTS)==0) {
 
-        prepare_objects_for_drawing();
+        prepare_objects_for_drawing(alwaysUseSoftware);
 
-        prepare_characters_for_drawing ();
+        prepare_characters_for_drawing(alwaysUseSoftware);
 
         if ((debug_flags & DBG_NODRAWSPRITES)==0) {
             our_eip=34;
@@ -2540,7 +2548,7 @@ void construct_virtual_screen(bool fullRedraw)
         if (fullRedraw)
             invalidate_screen();
 
-        draw_screen_background(ds);
+        draw_screen_background(ds, game.options[OPT_SOFTWARESPRITES]);
     }
     else if (!gfxDriver->RequiresFullRedrawEachFrame()) 
     {

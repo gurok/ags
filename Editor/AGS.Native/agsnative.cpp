@@ -3753,6 +3753,7 @@ Game^ load_old_game_dta_file(const char *fileName)
 	game->Settings->InventoryCursors = !thisgame.options[OPT_FIXEDINVCURSOR];
 	game->Settings->LeftToRightPrecedence = (thisgame.options[OPT_LEFTTORIGHTEVAL] != 0);
 	game->Settings->LetterboxMode = (thisgame.options[OPT_LETTERBOX] != 0);
+	game->Settings->ForceSoftwareStretchAndFlip = (thisgame.options[OPT_SOFTWARESPRITES] != 0);
 	game->Settings->MaximumScore = thisgame.totalscore;
 	game->Settings->MouseWheelEnabled = (thisgame.options[OPT_MOUSEWHEEL] != 0);
 	game->Settings->NumberDialogOptions = (thisgame.options[OPT_DIALOGNUMBERED] != 0);
@@ -4876,6 +4877,7 @@ void save_game_to_dta_file(Game^ game, const char *fileName)
 	thisgame.options[OPT_SAVESCREENSHOT] = game->Settings->SaveScreenshots;
 	thisgame.options[OPT_NOSKIPTEXT] = (int)game->Settings->SkipSpeech;
 	thisgame.options[OPT_PORTRAITSIDE] = (int)game->Settings->SpeechPortraitSide;
+	thisgame.options[OPT_SOFTWARESPRITES] = game->Settings->ForceSoftwareStretchAndFlip;
 	thisgame.options[OPT_SPEECHTYPE] = (int)game->Settings->SpeechStyle;
 	thisgame.options[OPT_SPLITRESOURCES] = game->Settings->SplitResources;
 	thisgame.options[OPT_TWCUSTOM] = game->Settings->TextWindowGUI;

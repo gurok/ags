@@ -36,6 +36,7 @@ namespace AGS.Types
         private bool _pixelPerfect = true;
         private bool _autoMoveInWalkMode = true;
         private bool _letterboxMode = false;
+        private bool _forceSoftwareStretchAndFlip = false;
         private int _splitResources = 0;
         private bool _turnBeforeWalking = true;
         private bool _turnBeforeFacing = true;
@@ -248,6 +249,16 @@ namespace AGS.Types
         {
             get { return _letterboxMode; }
             set { _letterboxMode = value; }
+        }
+
+        [DisplayName("Force software scaling and flipping")]
+        [Description("Sprite drawing will NOT be hardware accelerated in modes that support it (Direct3D). This ensures sprite scaling conforms to the game resolution, not the display resolution.")]
+        [DefaultValue(false)]
+        [Category("Visual")]
+        public bool ForceSoftwareStretchAndFlip
+        {
+            get { return _forceSoftwareStretchAndFlip; }
+            set { _forceSoftwareStretchAndFlip = value; }
         }
 
         [DisplayName("Automatically move the player in Walk mode")]
