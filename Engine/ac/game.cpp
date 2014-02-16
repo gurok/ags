@@ -60,6 +60,8 @@
 #include "ac/translation.h"
 #include "ac/dynobj/all_dynamicclasses.h"
 #include "ac/dynobj/all_scriptclasses.h"
+#include "ac/dynobj/cc_audiochannel.h"
+#include "ac/dynobj/cc_audioclip.h"
 #include "debug/debug_log.h"
 #include "debug/out.h"
 #include "font/fonts.h"
@@ -153,6 +155,7 @@ int displayed_room=-10,starting_room = -1;
 int in_new_room=0, new_room_was = 0;  // 1 in new room, 2 first time in new room, 3 loading saved game
 int new_room_pos=0;
 int new_room_x = SCR_NO_VALUE, new_room_y = SCR_NO_VALUE;
+int new_room_loop = SCR_NO_VALUE;
 
 //Bitmap *spriteset[MAX_SPRITES+1];
 //SpriteCache spriteset (MAX_SPRITES+1);
@@ -171,6 +174,8 @@ CCInventory ccDynamicInv;
 CCGUI       ccDynamicGUI;
 CCObject    ccDynamicObject;
 CCDialog    ccDynamicDialog;
+CCAudioClip ccDynamicAudioClip;
+CCAudioChannel ccDynamicAudio;
 ScriptString myScriptStringImpl;
 ScriptObject scrObj[MAX_INIT_SPR];
 ScriptGUI    *scrGui = NULL;
@@ -931,6 +936,13 @@ int Game_ChangeTranslation(const char *newFilename)
     }
 
     return 1;
+}
+
+ScriptAudioClip *Game_GetAudioClip(int index)
+{
+    if (index < 0 || index >= game.audioClipCount)
+        return NULL;
+    return &game.audioClips[index];
 }
 
 //=============================================================================
@@ -2840,6 +2852,42 @@ InteractionVariable *FindGraphicalVariable(const char *varName) {
     return NULL;
 }
 
+void register_audio_script_objects()
+{
+    int ee;
+    for (ee = 0; ee <= MAX_SOUND_CHANNELS; ee++) 
+    {
+        scrAudioChannel[ee].id = ee;
+        ccRegisterManagedObject(&scrAudioChannel[ee], &ccDynamicAudio);
+    }
+
+    for (ee = 0; ee < game.audioClipCount; ee++)
+    {
+        game.audioClips[ee].id = ee;
+        ccRegisterManagedObject(&game.audioClips[ee], &ccDynamicAudioClip);
+        ccAddExternalDynamicObject(game.audioClips[ee].scriptName, &game.audioClips[ee], &ccDynamicAudioClip);
+    }
+
+    calculate_reserved_channel_count();
+}
+
+bool unserialize_audio_script_object(int index, const char *objectType, const char *serializedData, int dataSize)
+{
+    if (strcmp(objectType, "AudioChannel") == 0)
+    {
+        ccDynamicAudio.Unserialize(index, serializedData, dataSize);
+    }
+    else if (strcmp(objectType, "AudioClip") == 0)
+    {
+        ccDynamicAudioClip.Unserialize(index, serializedData, dataSize);
+    }
+    else
+    {
+        return false;
+    }
+    return true;
+}
+
 //=============================================================================
 //
 // Script API Functions
@@ -3126,6 +3174,16 @@ RuntimeScriptValue Sc_Game_GetViewCount(const RuntimeScriptValue *params, int32_
     API_SCALL_INT(Game_GetViewCount);
 }
 
+RuntimeScriptValue Sc_Game_GetAudioClipCount(const RuntimeScriptValue *params, int32_t param_count)
+{
+    API_VARGET_INT(game.audioClipCount);
+}
+
+RuntimeScriptValue Sc_Game_GetAudioClip(const RuntimeScriptValue *params, int32_t param_count)
+{
+    API_SCALL_OBJ_PINT(ScriptAudioClip, ccDynamicAudioClip, Game_GetAudioClip);
+}
+
 
 void RegisterGameAPI()
 {
@@ -3175,6 +3233,8 @@ void RegisterGameAPI()
     ccAddExternalStaticFunction("Game::get_TranslationFilename",                Sc_Game_GetTranslationFilename);
     ccAddExternalStaticFunction("Game::get_UseNativeCoordinates",               Sc_Game_GetUseNativeCoordinates);
     ccAddExternalStaticFunction("Game::get_ViewCount",                          Sc_Game_GetViewCount);
+    ccAddExternalStaticFunction("Game::get_AudioClipCount",                     Sc_Game_GetAudioClipCount);
+    ccAddExternalStaticFunction("Game::geti_AudioClips",                         Sc_Game_GetAudioClip);
 
     /* ----------------------- Registering unsafe exports for plugins -----------------------*/
 
