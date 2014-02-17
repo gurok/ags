@@ -486,6 +486,12 @@ void check_controls() {
             }
         }
         //    RunTextScriptIParam(gameinst,"on_key_press",kgn);
+        if(key_shifts)
+        {
+            /* Sledgehammer */
+            remove_keyboard();
+            install_keyboard();
+        }
     }
 
     if ((IsInterfaceEnabled()) && (IsGamePaused() == 0) &&
