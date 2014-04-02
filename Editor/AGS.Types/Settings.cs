@@ -35,7 +35,6 @@ namespace AGS.Types
         private InterfaceDisabledAction _whenInterfaceDisabled = InterfaceDisabledAction.GreyOut;
         private bool _pixelPerfect = true;
         private bool _autoMoveInWalkMode = true;
-        private bool _letterboxMode = false;
         private int _splitResources = 0;
         private bool _turnBeforeWalking = true;
         private bool _turnBeforeFacing = true;
@@ -244,10 +243,12 @@ namespace AGS.Types
         [Description("Game will run at 320x240 or 640x480 with top and bottom black borders to give a square aspect ratio")]
         [DefaultValue(false)]
         [Category("Visual")]
+        [Browsable(false)]
+        [Obsolete("Letterbox game setting is deprecated and no longer required to be set")]
         public bool LetterboxMode
         {
-            get { return _letterboxMode; }
-            set { _letterboxMode = value; }
+            get { return false; }
+            set {  }
         }
 
         [DisplayName("Automatically move the player in Walk mode")]
