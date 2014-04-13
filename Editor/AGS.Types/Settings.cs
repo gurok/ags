@@ -949,13 +949,6 @@ namespace AGS.Types
                 {
                     wantThisProperty = false;
                 }
-                else if ((_resolution != GameResolutions.R320x200) && 
-                         (_resolution != GameResolutions.R640x400) &&
-                         (property.Name == "LetterboxMode"))
-                {
-                    // Only show letterbox option for 320x200 and 640x400 games
-                    wantThisProperty = false;
-                }
                 else if ((property.Name == "GlobalSpeechAnimationDelay") && (!UseGlobalSpeechAnimationDelay))
                 {
                     wantThisProperty = false;

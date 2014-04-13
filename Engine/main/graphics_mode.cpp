@@ -70,6 +70,7 @@ extern int _places_r, _places_g, _places_b;
 const int MaxScalingFactor = 8; // we support up to x8 scaling now
 
 int firstDepth, secondDepth;
+String GfxFilterRequest;
 
 int debug_15bit_mode = 0, debug_24bit_mode = 0;
 int convert_16bit_bgr = 0;
@@ -149,9 +150,9 @@ void adjust_sizes_for_resolution(int filever)
 
 }
 
-bool get_desktop_size_for_mode(Size &size)
+bool get_desktop_size_for_mode(Size &size, const bool windowed)
 {
-    if (usetup.windowed == 0)
+    if (!windowed)
         return get_desktop_resolution(&size.Width, &size.Height) == 0;
     else if (get_desktop_resolution(&size.Width, &size.Height) == 0)
     {
@@ -458,11 +459,6 @@ int find_max_supported_uniform_scaling(const Size &base_size, Size &found_size, 
                 continue;
             }
         }
-        if (keep_width && mode.Width != base_size.Width ||
-            keep_height && mode.Height != base_size.Height)
-        {
-            continue;
-        }
 
         if (mode.Width >= base_size.Width &&
             mode.Height >= base_size.Height)
@@ -501,17 +497,18 @@ int get_scaling_from_filter_name(const String &filter_id)
 
 // Finds any supported graphics mode that can fit requested game frame size;
 // returns true if found acceptable mode, sets found_size.
-bool try_find_nearest_supported_mode(const Size &base_size, const int scaling_factor, Size &found_size, const int color_depth)
+bool try_find_nearest_supported_mode(const Size &base_size, const int scaling_factor, Size &found_size, const int color_depth,
+                                     const bool windowed, const bool enable_sideborders, const bool force_letterbox)
 {
     Size desktop_size;
-    if (!get_desktop_size_for_mode(desktop_size))
+    if (!get_desktop_size_for_mode(desktop_size, windowed))
     {
         Out::FPrint("Failed to find acceptable supported gfx mode (unable to obtain desktop resolution)");
         return false;
     }
     const Size wanted_size = base_size * scaling_factor;
     // Windowed mode
-    if (usetup.windowed != 0)
+    if (windowed)
     {
         // Do not try to create windowed mode larger than current desktop resolution
         if (!wanted_size.ExceedsByAny(desktop_size))
@@ -521,40 +518,21 @@ bool try_find_nearest_supported_mode(const Size &base_size, const int scaling_fa
         }
         return false;
     }
-    // Unless letterbox is forced, try to find normal mode first;
-    // side-bordered modes are looked for only if they are enabled.
+
+    // Fullscreen mode: always try strictly no borders first, unless they are
+    // explicitly enabled, so that modes with borders could be tried later
+    // anyway if "no borders" failed.
     bool found = false;
-    if (game.options[OPT_LETTERBOX] == 0)
+    if (!enable_sideborders)
     {
-        // no letterboxing
-        if (usetup.enable_side_borders)
-        {
-            // sideborders only
-            // try match desktop ratio
-            found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, &desktop_size, false, true);
-            if (!found)
-                // disregard desktop ratio
-                found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, NULL, false, true);
-        }
-        if (!found)
-            // perfect match only
+        // no sideborders
+        if (!force_letterbox) 
+            // no letterboxing, perfect match only
             found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, NULL, true, true);
-    }
-    if (!found)
-    {
-        // with letterboxing
-        if (usetup.enable_side_borders)
-        {
-            // letterbox + sideborders
-            // try match desktop ratio
-            found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, &desktop_size);
-            if (!found)
-                // disregard desktop ratio
-                found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, NULL);
-        }
+
         if (!found)
         {
-            // letterbox only
+            // with letterboxing, letterbox only
             // try match desktop ratio
             found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, &desktop_size, true, false);
             if (!found)
@@ -562,6 +540,32 @@ bool try_find_nearest_supported_mode(const Size &base_size, const int scaling_fa
                 found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, NULL, true, false);
         }
     }
+
+    if (!found)
+    {
+        // with sideborders
+        if (!force_letterbox) 
+        {
+            // no letterbox, sideborders only
+            // try match desktop ratio
+            found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, &desktop_size, false, true);
+            if (!found)
+                // disregard desktop ratio
+                found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, NULL, false, true);
+        }
+
+        if (!found)
+        {
+            // with letterboxing, letterbox + sideborders
+            // try match desktop ratio
+            found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, &desktop_size);
+            if (!found)
+                // disregard desktop ratio
+                found = find_nearest_supported_mode(base_size, scaling_factor, found_size, color_depth, NULL);
+        }
+    }
+
+
     if (!found)
         Out::FPrint("Couldn't find acceptable supported gfx mode for game frame %d x %d (%d bit)",
             wanted_size.Width, wanted_size.Height, color_depth);
@@ -570,17 +574,18 @@ bool try_find_nearest_supported_mode(const Size &base_size, const int scaling_fa
 
 // Find maximal possible uniform integer scaling for the given game size, which can be handled by graphics driver;
 // returns found scaling factor, sets found_size.
-int try_find_max_supported_uniform_scaling(const Size &base_size, Size &found_size, const int color_depth)
+int try_find_max_supported_uniform_scaling(const Size &base_size, Size &found_size, const int color_depth,
+                                           const bool windowed, const bool enable_sideborders, const bool force_letterbox)
 {
     Size desktop_size;
-    if (!get_desktop_size_for_mode(desktop_size))
+    if (!get_desktop_size_for_mode(desktop_size, windowed))
     {
         Out::FPrint("Failed to find max supported uniform scaling (unable to obtain desktop resolution)");
         return 0;
     }
     int multiplier = 0;
     // Windowed mode
-    if (usetup.windowed != 0)
+    if (windowed)
     {
         // Do not try to create windowed mode larger than current desktop resolution
         const int xratio = desktop_size.Width / base_size.Width;
@@ -590,41 +595,19 @@ int try_find_max_supported_uniform_scaling(const Size &base_size, Size &found_si
         return multiplier;
     }
 
-    // Fullscreen mode
-    // Unless letterbox is forced, try to find normal mode first;
-    // side-bordered modes are looked for only if they are enabled.
-    if (game.options[OPT_LETTERBOX] == 0) 
+    // Fullscreen mode: always try strictly no borders first, unless they are
+    // explicitly enabled, so that modes with borders could be tried later
+    // anyway if "no borders" failed.
+    if (!enable_sideborders)
     {
-        // no letterboxing
-        if (usetup.enable_side_borders)
-        {
-            // sideborders only
-            // try match desktop ratio
-            multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, &desktop_size, false, true);
-            if (!multiplier)
-                // disregard desktop ratio
-                multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, NULL, false, true);
-            
-        }
-        if (!multiplier)
-            // perfect match only
+        // no sideborders
+        if (!force_letterbox) 
+            // no letterboxing, perfect match only
             multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, NULL, true, true);
-    }
-    if (!multiplier)
-    {
-        // with letterboxing
-        if (usetup.enable_side_borders)
-        {
-            // letterbox + sideborders
-            // try match desktop ratio
-            multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, &desktop_size);
-            if (!multiplier)
-                // disregard desktop ratio
-                multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, NULL);
-        }
+
         if (!multiplier)
         {
-            // letterbox only
+            // with letterboxing, letterbox only
             // try match desktop ratio
             multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, &desktop_size, true, false);
             if (!multiplier)
@@ -632,6 +615,31 @@ int try_find_max_supported_uniform_scaling(const Size &base_size, Size &found_si
                 multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, NULL, true, false);
         }
     }
+
+    if (!multiplier)
+    {
+        // with sideborders
+        if (!force_letterbox) 
+        {
+            // no letterbox, sideborders only
+            // try match desktop ratio
+            multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, &desktop_size, false, true);
+            if (!multiplier)
+                // disregard desktop ratio
+                multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, NULL, false, true);
+        }
+
+        if (!multiplier)
+        {
+            // with letterboxing, letterbox + sideborders
+            // try match desktop ratio
+            multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, &desktop_size);
+            if (!multiplier)
+                // disregard desktop ratio
+                multiplier = find_max_supported_uniform_scaling(base_size, found_size, color_depth, NULL);
+        }
+    }
+
     if (!multiplier)
         Out::FPrint("Couldn't find any supported uniform scaling for game size %d x %d (%d bit)",
             base_size.Width, base_size.Height, color_depth);
@@ -641,33 +649,37 @@ int try_find_max_supported_uniform_scaling(const Size &base_size, Size &found_si
 int engine_init_gfx_filters(Size &game_size, Size &screen_size, const int color_depth)
 {
     Out::FPrint("Initializing gfx filters");
-    const Size base_size = game_size;
-    String gfxfilter;
+    if (force_gfxfilter[0])
+        GfxFilterRequest = force_gfxfilter;
+    else
+        GfxFilterRequest = usetup.gfxFilterID;
+    Out::FPrint("Requested gfx filter: %s", GfxFilterRequest.GetCStr());
 
-    if (force_gfxfilter[0]) {
-        gfxfilter = force_gfxfilter;
-    }
-    else if (!usetup.gfxFilterID.IsEmpty() && stricmp(usetup.gfxFilterID, "max") != 0) {
-        gfxfilter = usetup.gfxFilterID;
-    }
+    String gfxfilter;
+    if (GfxFilterRequest.CompareNoCase("max") != 0)
+        gfxfilter = GfxFilterRequest;
+    
+    const Size base_size = game_size;
+    const bool windowed = usetup.windowed != 0;
+    const bool enable_sideborders = usetup.enable_side_borders != 0;
+    const bool force_letterbox = game.options[OPT_LETTERBOX] != 0;
 
     int scaling_factor = 0;
     if (!gfxfilter.IsEmpty())
     {
-        Out::FPrint("Requested gfx filter: %s", gfxfilter.GetCStr());
         scaling_factor = get_scaling_from_filter_name(gfxfilter);
         Size found_screen_size;
-        if (try_find_nearest_supported_mode(base_size, scaling_factor, found_screen_size, color_depth))
-        {
+        if (try_find_nearest_supported_mode(base_size, scaling_factor, found_screen_size, color_depth,
+                windowed, enable_sideborders, force_letterbox))
             screen_size = found_screen_size;
-        }
     }
 
 #if defined (WINDOWS_VERSION) || defined (LINUX_VERSION)
     if (screen_size.IsNull())
     {
         Size found_screen_size;
-        scaling_factor = try_find_max_supported_uniform_scaling(base_size, found_screen_size, color_depth);
+        scaling_factor = try_find_max_supported_uniform_scaling(base_size, found_screen_size, color_depth,
+                            windowed, enable_sideborders, force_letterbox);
         if (scaling_factor > 0)
         {
             screen_size = found_screen_size;
@@ -932,11 +944,19 @@ void display_gfx_mode_error(const Size &game_size, const Size &screen_size)
     proper_exit=1;
     platform->FinishedUsingGraphicsMode();
 
-    platform->DisplayAlert("There was a problem initializing graphics mode %d x %d (%d-bit) with game size %d x %d and filter '%s'.\n"
-        "(Problem: '%s')\n"
-        "Try to correct the problem, or seek help from the AGS homepage."
-        "%s",
-        screen_size.Width, screen_size.Height, firstDepth, game_size.Width, game_size.Height, filter ? filter->GetFilterID() : "Undefined", get_allegro_error(), platform->GetGraphicsTroubleshootingText());
+    String main_error;
+    if (screen_size.IsNull())
+        main_error.Format("There was a problem finding appropriate graphics mode for game size %d x %d (%d-bit) and requested filter '%s'.",
+            game_size.Width, game_size.Height, firstDepth, GfxFilterRequest.IsEmpty() ? "Undefined" : GfxFilterRequest);
+    else
+        main_error.Format("There was a problem initializing graphics mode %d x %d (%d-bit) with game size %d x %d and filter '%s'.",
+            screen_size.Width, screen_size.Height, firstDepth, game_size.Width, game_size.Height, filter ? filter->GetFilterID() : "Undefined");
+
+    platform->DisplayAlert("%s\n"
+            "(Problem: '%s')\n"
+            "Try to correct the problem, or seek help from the AGS homepage."
+            "%s",
+            main_error.GetCStr(), get_allegro_error(), platform->GetGraphicsTroubleshootingText());
 }
 
 int graphics_mode_init()

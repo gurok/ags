@@ -522,11 +522,17 @@ int acwsetup(const char*vername, const char*enbuild) {
     if (curdigi > 3) curdigi = 0;
     if (curmidi < 0) curmidi=0;
 
-    windowed = INIreadint("misc","windowed");
+    windowed = INIreadint("misc","windowed",0);
     vsync = INIreadint("misc","vsync");
-    useletterbox = INIreadint("misc","forceletterbox");
-    reduce32to16 = INIreadint("misc","notruecolor");
-    gameColDep = INIreadint("misc", "gamecolordepth");
+    useletterbox = INIreadint("misc","forceletterbox",0);
+
+    reduce32to16 = INIreadint("misc","notruecolor",0);
+    if (reduce32to16 < 0)
+      reduce32to16 = 0;
+
+    gameColDep = INIreadint("misc", "gamecolordepth", 0);
+    if (gameColDep < 0)
+      gameColDep = 0;
 
     refresh = INIreadint("misc","refresh",0);
     if (refresh < 1)
