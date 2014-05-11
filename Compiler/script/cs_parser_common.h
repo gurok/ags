@@ -68,10 +68,11 @@
 #define SYM_BREAK      55
 #define SYM_CONTINUE   56
 
-#define SFLG_PARAMETER  1
-#define SFLG_ARRAY      2
-#define SFLG_IMPORTED   4   // this is an import variable
-#define SFLG_ACCESSED   8   // if not set, the variable is never used
+#define SFLG_PARAMETER     1
+#define SFLG_ARRAY         2
+#define SFLG_IMPORTED      4   // this is an import variable
+#define SFLG_ACCESSED      8   // The variable was used in an expression
+#define SFLG_ACCESSED_RHS  16  // The variable was used *and* on the right-hand side of an expression (and therefore not redundant)
 #define SFLG_STRBUFFER    0x10  // was allocated a string buffer
 #define SFLG_ISSTRING     0x20  // is a pointer
 #define SFLG_READONLY     0x40  // user cannot change

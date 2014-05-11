@@ -21,6 +21,7 @@ struct symbolTable {
     long  ssize[MAXSYMBOLS];  // or return type size for function
     short sscope[MAXSYMBOLS];  // or num arguments for function
     long  arrsize[MAXSYMBOLS];
+    int   decline[MAXSYMBOLS];
     short extends[MAXSYMBOLS]; // inherits another class (classes) / owning class (member vars)
     // functions only, save types of return value and all parameters
     unsigned long funcparamtypes[MAXSYMBOLS][MAX_FUNCTION_PARAMETERS+1]; 

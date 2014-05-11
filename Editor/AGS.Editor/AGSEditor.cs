@@ -795,7 +795,7 @@ namespace AGS.Editor
 			}
 			else
 			{
-				Factory.NativeProxy.CompileScript(script, preProcessedCode.ToArray(), _game, isRoomScript);
+				Factory.NativeProxy.CompileScript(script, preProcessedCode.ToArray(), _game, isRoomScript, errors);
 			}
 		}
 

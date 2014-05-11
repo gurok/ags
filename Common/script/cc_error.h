@@ -22,13 +22,19 @@
 #include "script/cc_script.h"
 
 extern void cc_error(const char *, ...);
+extern void cc_warning(const char *, ...);
+
+#define ERROR_SIZE  400
 
 // error reporting
 extern int ccError;             // set to non-zero if error occurs
 extern int ccErrorLine;         // line number of the error
-extern char ccErrorString[400]; // description of the error
-extern char ccErrorCallStack[400];
+extern char ccErrorString[ERROR_SIZE]; // description of the error
+extern char ccErrorCallStack[ERROR_SIZE];
 extern bool ccErrorIsUserError;
 extern const char *ccCurScriptName; // name of currently compiling script
+extern char *ccWarningString; // List of warnings
+extern int ccWarningCount; // Number of warnings generated
+extern int *ccWarningLine; // Line numbers of warnings generated
 
 #endif // __CC_ERROR_H

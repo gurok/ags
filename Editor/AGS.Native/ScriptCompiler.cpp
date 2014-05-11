@@ -35,7 +35,7 @@ namespace AGS
 	namespace Native
 	{
 
-		void NativeMethods::CompileScript(Script ^script, cli::array<String^> ^preProcessedScripts, Game ^game, bool isRoomScript)
+		void NativeMethods::CompileScript(Script ^script, cli::array<String^> ^preProcessedScripts, Game ^game, bool isRoomScript, CompileMessages ^messages)
 		{
 			if (script->CompiledData != nullptr)
 			{
@@ -82,6 +82,13 @@ namespace AGS
         if (exceptionToThrow == nullptr)
         {
 			    scrpt = ccCompileText(mainScript, mainScriptName);
+                for (int index = 0; index < ccWarningCount; index++)
+                    messages->Add(gcnew CompileWarning(gcnew String(ccWarningString + (index * ERROR_SIZE)), gcnew String(ccCurScriptName), ccWarningLine[index]));
+                free(ccWarningString);
+                free(ccWarningLine);
+                ccWarningString = NULL;
+                ccWarningLine = NULL;
+                ccWarningCount = 0;
  			    if ((scrpt == NULL) || (ccError != 0))
 			    {
 				    exceptionToThrow = gcnew CompileError(gcnew String(ccErrorString), gcnew String(ccCurScriptName), ccErrorLine);

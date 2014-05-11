@@ -11,3 +11,9 @@ void cc_error_at_line(char *buffer, const char *error_msg)
 {
     sprintf(ccErrorString, "Error (line %d): %s", currentline, error_msg);
 }
+
+void cc_warning_at_line(char *buffer, const char *warning_msg)
+{
+    sprintf(ccWarningString + ((ccWarningCount - 1) * ERROR_SIZE), "Warning (line %d): %s", currentline, warning_msg);
+    ccWarningLine[ccWarningCount - 1] = currentline;
+}

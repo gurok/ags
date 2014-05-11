@@ -375,9 +375,9 @@ namespace AGS.Editor
             return _native.LoadRoomScript(roomFileName);
         }
 
-        public void CompileScript(Script script, string[] preProcessedData, Game game, bool isRoomScript)
+        public void CompileScript(Script script, string[] preProcessedData, Game game, bool isRoomScript, CompileMessages errors)
         {
-            _native.CompileScript(script, preProcessedData, game, isRoomScript);
+            _native.CompileScript(script, preProcessedData, game, isRoomScript, errors);
         }
 
         public void CompileGameToDTAFile(Game game, string fileName)

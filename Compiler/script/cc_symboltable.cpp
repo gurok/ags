@@ -201,6 +201,7 @@ int symbolTable::add_ex(char*nta,int typo,char sizee) {
     flags[numsymbols] = 0;
     vartype[numsymbols] = 0;
     extends[numsymbols] = 0;
+    decline[numsymbols] = -1;
     symbolTree.addEntry(sname[numsymbols], numsymbols);
     numsymbols++;
     return numsymbols-1;

@@ -294,9 +294,21 @@ int remove_locals(int from_level, int just_count, ccCompiledScript *scrip) {
     int zeroPtrCmd = SCMD_MEMZEROPTR;
     if (from_level == 0)
         zeroPtrCmd = SCMD_MEMZEROPTRND;
+    int oldline;
 
+    oldline = currentline;
     for (cc=0;cc<sym.numsymbols;cc++) {
         if ((sym.sscope[cc] > from_level) && (sym.stype[cc] == SYM_LOCALVAR)) {
+            //currentline = sym.decline[index];
+            if((sym.flags[cc] & SFLG_ACCESSED_RHS) == 0 && oldline > 0 && sym.decline[cc] > 0)
+            {
+                currentline = sym.decline[cc];
+                if(sym.flags[cc] & SFLG_PARAMETER)
+                    ;//cc_warning("Parameter '%s' declared and/or assigned, but not referenced", sym.get_name(cc));
+                else
+                    cc_warning("The value of local variable '%s' is never used", sym.get_name(cc));
+            }
+            sym.decline[cc] = -1;
             // caller will sort out stack, so ignore parameters
             if ((sym.flags[cc] & SFLG_PARAMETER)==0) {
                 if (sym.flags[cc] & SFLG_DYNAMICARRAY)
@@ -330,6 +342,7 @@ int remove_locals(int from_level, int just_count, ccCompiledScript *scrip) {
             }
         }
     }
+    currentline = oldline;
     return totalsub;
 }
 
@@ -1843,7 +1856,7 @@ int do_variable_memory_access(ccCompiledScript *scrip, int variableSym,
 // member variable, then read_variable_into_ax sets this
 int readonly_cannot_cause_error = 0;
 
-int do_variable_ax(int slilen,long*syml,ccCompiledScript*scrip,int writing, int mustBeWritable) {
+int do_variable_ax(int slilen,long*syml,ccCompiledScript*scrip,int writing, int mustBeWritable, bool rhs) {
   // read the various types of values into AX
   int ee;
 
@@ -1878,6 +1891,11 @@ int do_variable_ax(int slilen,long*syml,ccCompiledScript*scrip,int writing, int 
 
     // each clause in the chain can be marked as Accessed
     sym.flags[variableSym] |= SFLG_ACCESSED;
+    if(rhs)
+    {
+        sym.flags[variableSym] |= SFLG_ACCESSED_RHS;
+        //cc_warning("Accessed RHS '%s' %d", sym.get_name(variableSym), sym.flags[variableSym]);
+    }
 
     bool getAddressOnlyIntoAX = false;
     bool doMemoryAccessNow = false;
@@ -2199,14 +2217,14 @@ int do_variable_ax(int slilen,long*syml,ccCompiledScript*scrip,int writing, int 
 }
 
 
-int read_variable_into_ax(int slilen,long*syml,ccCompiledScript*scrip, int mustBeWritable = 0) {
+int read_variable_into_ax(int slilen,long*syml,ccCompiledScript*scrip, int mustBeWritable = 0, bool rhs = false) {
 
-  return do_variable_ax(slilen,syml,scrip, 0, mustBeWritable);
+  return do_variable_ax(slilen,syml,scrip, 0, mustBeWritable, rhs);
 }
 
 int write_ax_to_variable(int slilen,long*syml,ccCompiledScript*scrip) {
 
-  return do_variable_ax(slilen,syml,scrip, 1, 0);
+  return do_variable_ax(slilen,syml,scrip, 1, 0, false);
 }
 
 
@@ -2626,7 +2644,7 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
 
     if (using_op) {
       // write the address of the function's object to the OP reg
-      read_variable_into_ax(using_op, vnlist, scrip);
+      read_variable_into_ax(using_op, vnlist, scrip, 0, true);
       scrip->write_cmd1(SCMD_CALLOBJ, SREG_AX);
     }
 
@@ -2668,10 +2686,10 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
     }
   }
   else if (listlen == lilen) {
-    if (read_variable_into_ax(lilen,&vnlist[0],scrip)) return -1;
+    if (read_variable_into_ax(lilen,&vnlist[0],scrip,0,true)) return -1;
     }
   else if (listlen == 1) {
-    if (read_variable_into_ax(1,&symlist[0],scrip)) return -1;
+    if (read_variable_into_ax(1,&symlist[0],scrip,0,true)) return -1;
     }
   else {
     cc_error("Parse error in expr near '%s'",sym.get_name(symlist[0]));
@@ -2813,7 +2831,7 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
         // ++ or --
         readonly_cannot_cause_error = 0;
 
-        if (read_variable_into_ax(lilen,&vnlist[0],scrip, 1))
+        if (read_variable_into_ax(lilen,&vnlist[0],scrip, 1, true))
             return -1;
 
         int cpuOp = sym.ssize[asstype];
@@ -2839,7 +2857,7 @@ int evaluate_assignment(ccInternalList *targ, ccCompiledScript *scrip, bool expe
         scrip->push_reg(SREG_AX);
         int varTypeRHS = scrip->ax_val_type;
 
-        if (read_variable_into_ax(lilen,&vnlist[0],scrip))
+        if (read_variable_into_ax(lilen,&vnlist[0],scrip,0,true))
             return -1;
         if (check_type_mismatch(varTypeRHS, scrip->ax_val_type, 1))
             return -1;
@@ -4025,6 +4043,8 @@ startvarbit:
                     cc_error("Invalid use of 'static'");
                     return -1;
                 }
+                sym.decline[cursym] = currentline;
+//                cc_warning("Variable declared '%s'", sym.get_name(cursym));
 
                 // parse the declaration
                 int reslt = parse_variable_declaration(cursym,&next_type,isglobal,varsize,scrip,&targ,vtwas, isPointer);
@@ -4330,6 +4350,21 @@ startvarbit:
         cc_error("Function still open, missing }");
         return -1;
     }
+    // Find all variables that were declared but not used
+    /*
+    int index;
+    for(index = 0; index < sym.numsymbols; index++)
+    {
+        if(sym.decline[index] != -1)
+        {
+            currentline = sym.decline[index];
+            if((sym.flags[index] & SFLG_ACCESSED_RHS) == 0)
+                cc_warning("Variable '%s' declared but not used %d", sym.get_name(index), sym.flags[index]);
+            sym.decline[index] = -1;
+        }
+    }
+    */
+    currentline = -1;
     return 0;
 }
 
