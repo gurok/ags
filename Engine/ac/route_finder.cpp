@@ -600,7 +600,8 @@ findroutebk:
       return 0;
   }
 
-  if (is_straight)
+  // Try dijkstra first unless preserving quirky old behaviour
+  if (loaded_game_file_version <= kGameVersion_330 && is_straight)
     ;            // don't use new algo on arrow key presses
   else if (find_route_dijkstra(srcx, srcy, tox[0], toy[0])) {
     return 1;
