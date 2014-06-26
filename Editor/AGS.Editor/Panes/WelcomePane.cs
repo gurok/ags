@@ -31,7 +31,6 @@ namespace AGS.Editor
             "If your room background is continually flashing, make sure you didn't accidentally import a second background." };
 
         private int _currentTipIndex;
-        private string _currentTipLinkTarget;
         private GUIController _guiContoller;
 
         public WelcomePane(GUIController guiContoller)
@@ -57,26 +56,25 @@ namespace AGS.Editor
 
         private void WelcomePane_Resize(object sender, EventArgs e)
         {
-            int newWidth = this.ClientRectangle.Width - pnlRight.Left;
-            if (newWidth < 25) newWidth = 25;
-            pnlRight.Width = newWidth - 10;
-            lblUpgradingInfo.MaximumSize = new Size(pnlRight.ClientRectangle.Width - lblUpgradingInfo.Left - 10, 0);
-            lnkUpgrading.MaximumSize = new Size(pnlRight.ClientRectangle.Width - lnkUpgrading.Left - 10, 0);
-            lnkUpgrading.Top = lblUpgradingInfo.Bottom + 10;
-            lnkUpgradingFrom302.MaximumSize = new Size(pnlRight.ClientRectangle.Width - lnkUpgrading.Left - 10, 0);
-            lnkUpgradingFrom302.Top = lnkUpgrading.Bottom + 5;
-            lblUpgradingInfo3.MaximumSize = new Size(pnlRight.ClientRectangle.Width - lblUpgradingInfo3.Left - 10, 0);
-            lblUpgradingInfo3.Top = lnkUpgradingFrom302.Bottom + 10;
-            pnlRight.Height = lblUpgradingInfo3.Bottom + 10;
         }
 
         private void WelcomePane_Load(object sender, EventArgs e)
         {
             _currentTipIndex = new Random().Next(0, TIPS_OF_THE_DAY.Length);
             ShowTipOfTheDay(_currentTipIndex);
+			webView.Url = new Uri("file:///C:/Users/Administrator/Desktop/ags.html");
         }
 
-        private void lnkUpgradingFrom302_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+		private void WelcomePane_Click(object sender, EventArgs e)
+		{
+			webView.Visible = !webView.Visible;
+			/*
+			if (!webView.Visible)
+				webView.Visible = true;
+			*/
+		}
+
+		private void lnkUpgradingFrom302_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             Factory.GUIController.LaunchHelpForKeyword("Upgrading to AGS 3.2");
         }
@@ -93,32 +91,11 @@ namespace AGS.Editor
 
         private void ShowTipOfTheDay(int tipIndex)
         {
-            string tipText = TIPS_OF_THE_DAY[tipIndex];
-            lnkTipText.LinkArea = new LinkArea(0, 0);
-            _currentTipLinkTarget = null;
-
-            int linkOffset = tipText.IndexOf("<a href=\"");
-            if (linkOffset >= 0)
-            {
-                string linkTarget = tipText.Substring(linkOffset + 9);
-                _currentTipLinkTarget = linkTarget.Substring(0, linkTarget.IndexOf('"'));
-                tipText = tipText.Substring(0, linkOffset) + tipText.Substring(tipText.IndexOf('"', linkOffset + 9) + 2);
-
-                int linkEnd = tipText.IndexOf("</a>");
-                if (linkEnd >= 0)
-                {
-                    tipText = tipText.Substring(0, linkEnd) + tipText.Substring(linkEnd + 4);
-                }
-
-                lnkTipText.LinkArea = new LinkArea(linkOffset, linkEnd - linkOffset);
-            }
-            lnkTipText.Text = tipText;
-            lnkNextTip.Top = lnkTipText.Bottom + 10;
-            pnlTipOfTheDay.Height = lnkNextTip.Bottom + 15;
         }
 
         private void lnkTipText_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
+			/*
             if (_currentTipLinkTarget.StartsWith("help:"))
             {
                 _guiContoller.LaunchHelpForKeyword(_currentTipLinkTarget.Substring(5));
@@ -127,6 +104,7 @@ namespace AGS.Editor
             {
                 System.Diagnostics.Process.Start(_currentTipLinkTarget);
             }
+			 * */
         }
     }
 }

@@ -211,7 +211,7 @@ int cc_tokenize(const char*inpl, ccInternalList*targ, ccCompiledScript*scrip) {
                     (sym.stype[last_time] != SYM_SEMICOLON) &&
                     (sym.stype[last_time] != SYM_OPENBRACE) &&
                     (sym.stype[last_time] != SYM_OPENBRACKET) &&
-                    (towrite != in_struct_declr)) {
+                    (towrite != in_struct_declr || sym.stype[last_time] == SYM_VARTYPE)) {
                         const char *new_name = get_member_full_name(in_struct_declr, towrite);
                         //      printf("changed '%s' to '%s'\n",sym.get_name(towrite),new_name);
                         towrite = sym.find((char *) new_name);
@@ -2259,7 +2259,7 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
     // The operator is the first thing in the expression
     if (sym.get_type(symlist[oploc]) == SYM_NEW) 
     {
-      if (listlen < 5)
+      if (listlen < 4)
       {
         cc_error("parse error after 'new'");
         return -1;
@@ -2272,12 +2272,14 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
 
       int arrayType = symlist[oploc + 1];
 
+      /*
       if ((sym.get_type(symlist[oploc + 2]) != SYM_OPENBRACKET) ||
           (sym.get_type(symlist[listlen - 1]) != SYM_CLOSEBRACKET))
       {
         cc_error("'new' can only be used to create arrays");
         return -1;
       }
+      */
 
       if (parse_sub_expr(&symlist[oploc + 3], listlen - 4, scrip))
         return -1;
