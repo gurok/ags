@@ -134,6 +134,7 @@ struct GameState {
     int   normal_font, speech_font;
     char  key_skip_wait;
     int   swap_portrait_lastchar;
+    int   swap_portrait_lastlastchar;
     int   seperate_music_lib;
     int   in_conversation;
     int   screen_tint;
@@ -194,5 +195,7 @@ struct GameState {
     void ReadQueuedAudioItems_Aligned(Common::Stream *in);
     void WriteQueuedAudioItems_Aligned(Common::Stream *out);
 };
+
+extern GameState play;
 
 #endif // __AC_GAMESTATE_H

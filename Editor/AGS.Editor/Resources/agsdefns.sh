@@ -310,6 +310,17 @@ enum ChangeVolumeType {
   eVolExistingAndFuture = 1680
 };
 
+enum CharacterDirection {
+  eDirectionDown = 0,
+  eDirectionLeft,
+  eDirectionRight,
+  eDirectionUp,
+  eDirectionDownRight,
+  eDirectionUpRight,
+  eDirectionDownLeft,
+  eDirectionUpLeft
+};
+
 internalstring autoptr managed struct String {
   /// Creates a formatted string using the supplied parameters.
   import static String Format(const string format, ...);    // $AUTOCOMPLETESTATICONLY$
@@ -520,6 +531,10 @@ managed struct Game {
   readonly import static attribute bool UseNativeCoordinates;
   /// Gets the number of views in the game.
   readonly import static attribute int ViewCount;
+  /// Gets the number of audio clips in the game.
+  readonly import static attribute int AudioClipCount;
+  /// Accesses the audio clips collection.
+  readonly import static attribute AudioClip *AudioClips[];
 };
 
 managed struct Parser {
@@ -1545,6 +1560,8 @@ managed struct Hotspot {
   import String GetTextProperty(const string property);
   /// Runs the specified event handler for this hotspot.
   import void RunInteraction(CursorMode);
+  /// Checks whether an event handler has been registered for clicking on this hotspot in the specified cursor mode.
+  import bool IsInteractionAvailable(CursorMode);
   /// Gets/sets whether this hotspot is enabled.
   import attribute bool Enabled;
   /// Gets the ID of the hotspot.
@@ -1821,6 +1838,8 @@ managed struct Object {
   import function RemoveTint();
   /// Runs the event handler for the specified event.
   import function RunInteraction(CursorMode);
+  /// Checks whether an event handler has been registered for clicking on this object in the specified cursor mode.
+  import bool     IsInteractionAvailable(CursorMode);
   /// Instantly moves the object to have its bottom-left at the new co-ordinates.
   import function SetPosition(int x, int y);
   /// Sets the object to use the specified view, ahead of doing an animation.
@@ -1881,7 +1900,7 @@ managed struct Character {
   /// Animates the character using its current locked view.
   import function Animate(int loop, int delay, RepeatStyle=eOnce, BlockingStyle=eBlock, Direction=eForwards);
   /// Moves the character to another room. If this is the player character, the game will also switch to that room.
-  import function ChangeRoom(int room, int x=SCR_NO_VALUE, int y=SCR_NO_VALUE);
+  import function ChangeRoom(int room, int x=SCR_NO_VALUE, int y=SCR_NO_VALUE, CharacterDirection direction=SCR_NO_VALUE);
   /// Moves the character to another room, using the old-style position variable
   import function ChangeRoomAutoPosition(int room, int position=0);
   /// Changes the character's normal walking view.
@@ -1909,6 +1928,8 @@ managed struct Character {
   import function IsCollidingWithChar(Character*);
   /// Checks whether this character is in collision with the object.
   import function IsCollidingWithObject(Object* );
+  /// Checks whether an event handler has been registered for clicking on this character in the specified cursor mode.
+  import bool     IsInteractionAvailable(CursorMode);
   /// Locks the character to this view, ready for doing animations.
   import function LockView(int view);
   /// Locks the character to this view, and aligns it against one side of the existing sprite.

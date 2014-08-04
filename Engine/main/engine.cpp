@@ -1117,6 +1117,7 @@ void init_game_settings() {
     play.bad_parsed_word[0] = 0;
     play.swap_portrait_side = 0;
     play.swap_portrait_lastchar = -1;
+    play.swap_portrait_lastlastchar = -1;
     play.in_conversation = 0;
     play.skip_display = 3;
     play.no_multiloop_repeat = 0;
@@ -1231,6 +1232,8 @@ void engine_init_game_shit()
 
     if (usetup.windowed)
         scsystem.windowed = 1;
+    if (usetup.vsync)
+        scsystem.vsync = 1;
 
 #if defined (DOS_VERSION)
     filter->SetMouseArea(0,0,BASEWIDTH-1,BASEHEIGHT-1);
