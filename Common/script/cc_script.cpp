@@ -13,6 +13,7 @@
 //=============================================================================
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include "cc_script.h"
@@ -65,6 +66,9 @@ ccScript::ccScript()
     importsCapacity     = 0;
     imports             = NULL;
     numimports          = 0;
+    typesCapacity       = 0;
+    types               = NULL;
+    numtypes            = 0;
     exportsCapacity     = 0;
     exports             = NULL;
     export_addr         = NULL;
@@ -83,6 +87,7 @@ ccScript::~ccScript()
 
 void ccScript::Write(Stream *out) {
     int n;
+    int nn;
     out->Write(scfilesig,4);
     out->WriteInt32(SCOM_VERSION);
     out->WriteInt32(globaldatasize);
@@ -112,6 +117,15 @@ void ccScript::Write(Stream *out) {
         out->WriteArray(sectionNames[n], strlen(sectionNames[n]) + 1, 1);
         out->WriteInt32(sectionOffsets[n]);
     }
+    out->WriteInt32(numtypes);
+    for (n = 0; n < numtypes; n++) {
+        out->WriteInt32(types[n].numreferences);
+        out->WriteInt32(types[n].size);
+        for (nn = 0; nn < types[n].numreferences; nn++) {
+            out->WriteInt32(types[n].references[nn]);
+        }
+    }
+
     out->WriteInt32(ENDFILESIG);
 }
 
@@ -119,6 +133,7 @@ bool ccScript::Read(Stream *in)
 {
   instances = 0;
   int n;
+  int nn;
   char gotsig[5];
   currentline = -1;
   // MACPORT FIX: swap 'size' and 'nmemb'
@@ -207,6 +222,22 @@ bool ccScript::Read(Stream *in)
     sectionOffsets = NULL;
   }
 
+  if (fileVer >= 90) {
+      // Read runtime types
+      numtypes = in->ReadInt32();
+      if(numtypes > 0) {
+          types = (ccType *) malloc(numtypes * sizeof(ccType));
+          for (n = 0; n < numtypes; n++) {
+              types[n].numreferences = in->ReadInt32();
+              types[n].size = in->ReadInt32();
+              types[n].references = (int *) malloc(types[n].numreferences * sizeof(int));
+              for (nn = 0; nn < types[n].numreferences; nn++) {
+                  types[n].references[nn] = in->ReadInt32();
+              }
+          }
+      }
+  }
+
   if (in->ReadInt32() != ENDFILESIG) {
     cc_error("internal error rebuilding script");
     return false;
@@ -248,6 +279,17 @@ void ccScript::Free()
 
     for (aa = 0; aa < numSections; aa++)
         free(sectionNames[aa]);
+
+    if (types != NULL)
+    {
+        for (aa = 0; aa < numtypes; aa++)
+            if(types[aa].references != NULL)
+                free(types[aa].references);
+        free(types);
+    }
+    numtypes = 0;
+    typesCapacity = 0;
+    types = NULL;
 
     if (sectionNames != NULL)
     {

@@ -22,6 +22,7 @@ struct symbolTable {
     short sscope[MAXSYMBOLS];  // or num arguments for function
     long  arrsize[MAXSYMBOLS];
     short extends[MAXSYMBOLS]; // inherits another class (classes) / owning class (member vars)
+    int   rtype[MAXSYMBOLS]; // runtime type id
     // functions only, save types of return value and all parameters
     unsigned long funcparamtypes[MAXSYMBOLS][MAX_FUNCTION_PARAMETERS+1]; 
     short funcParamDefaultValues[MAXSYMBOLS][MAX_FUNCTION_PARAMETERS+1]; 

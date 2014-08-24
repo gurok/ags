@@ -180,6 +180,98 @@ int ccCompiledScript::remove_any_import (char*namm, SymbolDef *oldSym) {
     return 0;
 }
 
+// Expands the types array, returning true if it succeeds
+bool ccCompiledScript::expand_types()
+{
+    ccType *oldTypes;
+    bool result;
+    int oldCapacity;
+
+    oldCapacity = typesCapacity;
+    oldTypes = types;
+    if(typesCapacity == 0)
+        typesCapacity = 4; // Assume ~ 4 types as a starting point for the average module
+    else
+        typesCapacity *= 2;
+    types = (ccType *) realloc(types, sizeof(ccType) * typesCapacity);
+    if(types == NULL)
+    {
+        // Out of memory, so undo
+        types = oldTypes;
+        typesCapacity = oldCapacity;
+        result = false;
+    }
+    else
+        result = true;
+
+    return(result);
+}
+
+// Adds a new runtime type, returning the id of the new tpye or -1 on failure
+int ccCompiledScript::add_type()
+{
+    int id;
+
+    if(numtypes < typesCapacity || expand_types())
+    {
+        // Construct the new type
+        types[numtypes].referenceCapacity = 0;
+        types[numtypes].numreferences = 0;
+        types[numtypes].references = NULL;
+        id = numtypes;
+        numtypes++;
+    }
+    else
+        id = -1;
+
+    return(id);
+}
+
+// Expands the references array for a given type, returning true if it succeeds
+bool ccCompiledScript::expand_references(int id)
+{
+    int *oldReferences;
+    bool result;
+    int oldCapacity;
+
+    oldCapacity = typesCapacity;
+    oldReferences = types[id].references;
+    if(types[id].referenceCapacity == 0)
+        types[id].referenceCapacity = 4; // Start with 4 pointers to cover most types, then expand to 8, 16, 32, etc.
+    else
+        types[id].referenceCapacity *= 2;
+    types[id].references = (int *) realloc(types[id].references, sizeof(int) * types[id].referenceCapacity);
+    if(types[id].references == NULL)
+    {
+        // Out of memory, so undo
+        types[id].references = oldReferences;
+        types[id].referenceCapacity = oldCapacity;
+        result = false;
+    }
+    else
+        result = true;
+
+    return(result);
+}
+
+bool ccCompiledScript::add_reference(int id, int offset)
+{
+    bool result;
+    int *oldReferences;
+    int oldCapacity;
+
+    if(types[id].numreferences < types[id].referenceCapacity || expand_references(id))
+    {
+        types[id].references[types[id].numreferences] = offset;
+        types[id].numreferences++;
+        result = true;
+    }
+    else
+        result = false;
+
+    return(result);
+}
+
 int ccCompiledScript::add_new_export(char*namm,int etype,long eoffs, int numArgs) 
 {
     if (numexports >= exportsCapacity) 
@@ -312,9 +404,12 @@ void ccCompiledScript::init() {
     numfixups = 0;
     numimports = 0;
     numexports = 0;
+    numtypes = 0;
     numSections = 0;
     importsCapacity = 0;
     imports = NULL;
+    typesCapacity = 0;
+    types = NULL;
     exportsCapacity = 0;
     exports = NULL;
     export_addr = NULL;

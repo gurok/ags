@@ -43,11 +43,18 @@ struct ccCompiledScript: public ccScript {
 
     void pop_reg(int regg);
 
-    intptr_t ccCompiledScript::yank_chunk(int32_t start, intptr_t **nested_chunk, int index);
-    void ccCompiledScript::write_chunk(intptr_t **nested_chunk, int index, intptr_t chunk_size, bool dispose, int fixup_start, int fixup_stop, int32_t adjust);
+    int add_type();
+    bool add_reference(int id, int offset);
+
+    intptr_t yank_chunk(int32_t start, intptr_t **nested_chunk, int index);
+    void write_chunk(intptr_t **nested_chunk, int index, intptr_t chunk_size, bool dispose, int fixup_start, int fixup_stop, int32_t adjust);
 
     ccCompiledScript();
     virtual ~ccCompiledScript();
+
+private:
+    bool expand_types();
+    bool expand_references(int id);
 };
 
 #endif // __CC_COMPILEDSCRIPT_H

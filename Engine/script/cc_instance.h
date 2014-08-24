@@ -135,6 +135,8 @@ public:
     int32_t callStackAddr[MAX_CALL_STACK];
     ccInstance *callStackCodeInst[MAX_CALL_STACK];
 
+    ccType *types;
+
     // array of real import indexes used in script
     int  *resolved_imports;
     int  numimports;

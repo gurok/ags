@@ -244,6 +244,7 @@ ccInstance::ccInstance()
     callStackSize       = 0;
     loadedInstanceId    = 0;
     returnValue         = 0;
+    types               = NULL;
 
     code_fixups         = NULL;
 }
@@ -1257,13 +1258,14 @@ int ccInstance::Run(int32_t curpc)
                   cc_error("invalid size for dynamic array; requested: %d, range: 1..1000000", numElements);
                   return -1;
               }
-              int32_t handle = globalDynamicArray.Create(numElements, arg2.IValue, arg3.GetAsBool());
+              
+              int32_t handle = globalDynamicArray.Create(numElements, types[arg2.IValue].size, arg3.GetAsBool());
               reg1.SetDynamicObject((void*)ccGetObjectAddressFromHandle(handle), &globalDynamicArray);
               break;
           }
       case SCMD_NEWUSEROBJECT:
           {
-              const int32_t size = arg2.IValue;
+              const int32_t size = types[arg2.IValue].size;
               if (size < 0)
               {
                   cc_error("Invalid size for user object; requested: %u (or %d), range: 0..%d", (uint32_t)size, size, INT_MAX);
@@ -1723,6 +1725,8 @@ bool ccInstance::_Create(ccScript * scri, ccInstance * joined)
             }
         }
     }
+    types = scri->types;
+
     return true;
 }
 

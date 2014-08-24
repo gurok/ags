@@ -2293,7 +2293,7 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
             return -1;
           }
 
-          scrip->write_cmd3(SCMD_NEWARRAY, SREG_AX, size, isManagedType);
+          scrip->write_cmd3(SCMD_NEWARRAY, SREG_AX, sym.rtype[arrayType], isManagedType);
           scrip->ax_val_type = arrayType | STYPE_DYNARRAY;
 
           if (isManagedType)
@@ -2307,7 +2307,7 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
             return -1;
           }
           const size_t size = sym.ssize[symlist[oploc + 1]];
-          scrip->write_cmd2(SCMD_NEWUSEROBJECT, SREG_AX, size);
+          scrip->write_cmd2(SCMD_NEWUSEROBJECT, SREG_AX, sym.rtype[symlist[oploc + 1]]);
           scrip->ax_val_type = symlist[oploc + 1] | STYPE_POINTER;
       }
 
@@ -3389,6 +3389,12 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
             sym.stype[stname] = SYM_VARTYPE;
             sym.flags[stname] |= SFLG_STRUCTTYPE;
             sym.ssize[stname] = 0;
+            sym.rtype[stname] = scrip->add_type();
+            if(sym.rtype[stname] == -1)
+            {
+                cc_error("too many types");
+                return -1;
+            }
 
             if (sym.get_type(targ.peeknext()) == SYM_SEMICOLON) {
                 // forward-declaration of struct type
@@ -3646,6 +3652,12 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
                         if (member_is_pointer) {
                             sym.flags[vname] |= SFLG_POINTER;
                             sym.ssize[vname] = 4;
+                            // If the pointer is to a managed, non-builtin type, add a runtime reference
+                            if((sym.flags[cursym] & SFLG_MANAGED) && (sym.flags[cursym] & SFLG_BUILTIN == 0) && !scrip->add_reference(sym.rtype[stname], size_so_far))
+                            {
+                                cc_error("too many types");
+                                return -1;
+                            }
                         }
                         if (member_is_static)
                             sym.flags[vname] |= SFLG_STATIC;
@@ -3752,6 +3764,7 @@ int __cc_compile_file(const char*inpl,ccCompiledScript*scrip) {
             // align struct on 4-byte boundary in keeping with compiler
             if ((size_so_far % 4) != 0) size_so_far += 4 - (size_so_far % 4);
             sym.ssize[stname] = size_so_far;
+            scrip->types[sym.rtype[stname]].size = size_so_far;
             // read in the }
             targ.getnext();
             if (sym.get_type(targ.getnext()) != SYM_SEMICOLON) {

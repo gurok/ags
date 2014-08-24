@@ -24,6 +24,14 @@
 namespace AGS { namespace Common { class Stream; } }
 using namespace AGS; // FIXME later
 
+struct ccType
+{
+    int size; // Size of the type
+    int numreferences;
+    int referenceCapacity;
+    int *references;
+};
+
 struct ccScript
 {
 public:
@@ -43,6 +51,9 @@ public:
     char **exports;   // names of exports
     int32_t *export_addr; // high byte is type; low 24-bits are offset
     int numexports;
+    int typesCapacity;
+    ccType *types; // array of type info
+    int numtypes;
     int instances;
     // 'sections' allow the interpreter to find out which bit
     // of the code came from header files, and which from the main file
