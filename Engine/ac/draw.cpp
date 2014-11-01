@@ -58,6 +58,7 @@
 #include "gfx/ali3dexception.h"
 #include "gfx/blender.h"
 #include "main/graphics_mode.h"
+#include "script/script.h"
 
 using namespace AGS::Common;
 using namespace AGS::Engine;
@@ -2376,9 +2377,12 @@ void update_screen() {
     gfxDriver->DrawSprite(AGSE_POSTSCREENDRAW, 0, NULL);
     Bitmap *ds = GetVirtualScreen();
 
+    domouse (DOMOUSE_NOCURSOR);
+    if ((mousex != lastmx) || (mousey != lastmy)) {
+        run_function_on_non_blocking_thread(&mouseMoveFunc);
+    }
     // update animating mouse cursor
     if (game.mcurs[cur_cursor].view>=0) {
-        domouse (DOMOUSE_NOCURSOR);
         // only on mousemove, and it's not moving
         if (((game.mcurs[cur_cursor].flags & MCF_ANIMMOVE)!=0) &&
             (mousex==lastmx) && (mousey==lastmy)) ;
@@ -2402,8 +2406,8 @@ void update_screen() {
             mouse_delay = views[viewnum].loops[loopnum].frames[mouse_frame].speed + 5;
             CheckViewFrame (viewnum, loopnum, mouse_frame);
         }
-        lastmx=mousex; lastmy=mousey;
     }
+    lastmx=mousex; lastmy=mousey;
 
     // draw the debug console, if appropriate
     if ((play.debug_mode > 0) && (display_console != 0)) 
@@ -2438,8 +2442,6 @@ void update_screen() {
         gfxDriver->DrawSprite(0, 0, debugConsole);
         invalidate_sprite(0, 0, debugConsole);
     }
-
-    domouse(DOMOUSE_NOCURSOR);
 
     if (!play.mouse_cursor_hidden)
     {

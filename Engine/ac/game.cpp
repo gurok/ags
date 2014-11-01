@@ -586,6 +586,7 @@ void unload_game_file() {
     renderDialogOptionsFunc.moduleHasFunction.resize(0);
     getDialogOptionUnderCursorFunc.moduleHasFunction.resize(0);
     runDialogOptionMouseClickHandlerFunc.moduleHasFunction.resize(0);
+    mouseMoveFunc.moduleHasFunction.resize(0);
     numScriptModules = 0;
 
     if (game.audioClipCount > 0)

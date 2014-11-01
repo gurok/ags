@@ -74,6 +74,7 @@ NonBlockingScriptFunction getDialogOptionsDimensionsFunc("dialog_options_get_dim
 NonBlockingScriptFunction renderDialogOptionsFunc("dialog_options_render", 1);
 NonBlockingScriptFunction getDialogOptionUnderCursorFunc("dialog_options_get_active", 1);
 NonBlockingScriptFunction runDialogOptionMouseClickHandlerFunc("dialog_options_mouse_click", 2);
+NonBlockingScriptFunction mouseMoveFunc("on_mouse_move", 0);
 
 ScriptSystem scsystem;
 
