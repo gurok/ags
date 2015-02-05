@@ -348,6 +348,8 @@ ScriptDynamicSprite* DynamicSprite_CreateFromScreenShot(int width, int height) {
             RectWH(0, 0, width, height));
     }
 
+    // Set the alpha channel to 0xFF
+    BitmapHelper::CopyTransparency(newPic, newPic, false, false);
     // replace the bitmap in the sprite set
     add_dynamic_sprite(gotSlot, gfxDriver->ConvertBitmapToSupportedColourDepth(newPic));
     ScriptDynamicSprite *new_spr = new ScriptDynamicSprite(gotSlot);
