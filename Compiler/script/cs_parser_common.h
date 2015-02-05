@@ -13,6 +13,7 @@
 #define NEST_STRUCT     7
 #define NEST_DO         8 // Do statement (to be followed by a while)
 #define NEST_DOSINGLE   9 // Single Do statement
+#define NEST_FOR        10 // For statement
 #define MAX_FUNCTIONS 2000
 #define MAX_FUNCTION_PARAMETERS 15
 // This is the maximum length of a "static string" in the script
