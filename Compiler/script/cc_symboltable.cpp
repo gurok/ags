@@ -9,7 +9,7 @@
 
 symbolTable::symbolTable() { numsymbols=0; currentscope=0; usingTempBuffer = 0; stringStructSym = 0; }
 int symbolTable::get_num_args(int funcSym) {
-    return sscope[funcSym] % 100;
+    return sscope[funcSym];
 }
 int symbolTable::get_type(int ii) {
     // just return the real type, regardless of pointerness/constness

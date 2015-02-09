@@ -486,7 +486,7 @@ int check_for_default_value(ccInternalList &targ, int funcsym, int numparams) {
             return -1;
         }
 
-        sym.funcParamDefaultValues[funcsym][numparams % 100] = defaultValue;
+        sym.funcParamDefaultValues[funcsym][numparams] = defaultValue;
 
     }
 
@@ -663,7 +663,7 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
     if (next_type == SYM_CLOSEPARENTHESIS) break;
     else if (next_type == SYM_VARARGS) {
       // variable number of arguments
-      numparams+=100;
+      sym.flags[funcsym] |= SFLG_VARARGS;
       cursym = targ.getnext();
       if (sym.get_type(cursym) != SYM_CLOSEPARENTHESIS) {
         cc_error("expected ')' after variable-args");
@@ -676,7 +676,7 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
     }
     else if (next_type == SYM_VARTYPE) {
       // function parameter
-      if ((numparams % 100) >= MAX_FUNCTION_PARAMETERS) {
+      if (numparams >= MAX_FUNCTION_PARAMETERS) {
         cc_error("too many parameters defined for function");
         return -1;
       }
@@ -686,17 +686,17 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
       }
       int isPointerParam = 0;
       // save the parameter type (numparams starts from 1)
-      sym.funcparamtypes[funcsym][numparams % 100] = cursym;
-      sym.funcParamDefaultValues[funcsym][numparams % 100] = PARAM_NO_DEFAULT_VALUE;
+      sym.funcparamtypes[funcsym][numparams] = cursym;
+      sym.funcParamDefaultValues[funcsym][numparams] = PARAM_NO_DEFAULT_VALUE;
 
       if (next_is_const)
-        sym.funcparamtypes[funcsym][numparams % 100] |= STYPE_CONST;
+        sym.funcparamtypes[funcsym][numparams] |= STYPE_CONST;
 
       functype[strlen(functype)+1] = 0;
       functype[strlen(functype)] = (char)cursym;  // save variable type
       if (strcmp(sym.get_name(targ.peeknext()), "*") == 0) {
         // pointer
-        sym.funcparamtypes[funcsym][numparams % 100] |= STYPE_POINTER;
+        sym.funcparamtypes[funcsym][numparams] |= STYPE_POINTER;
         isPointerParam = 1;
         targ.getnext();
         if ((sym.flags[cursym] & SFLG_MANAGED) == 0) {
@@ -711,7 +711,7 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
       }
 
       if (sym.flags[cursym] & SFLG_AUTOPTR) {
-        sym.funcparamtypes[funcsym][numparams % 100] |= STYPE_POINTER;
+        sym.funcparamtypes[funcsym][numparams] |= STYPE_POINTER;
         isPointerParam = 1;
       }
 
@@ -777,7 +777,7 @@ int process_function_declaration(ccInternalList &targ, ccCompiledScript*scrip,
       }
       else if (dynArrayStatus > 0)
       {
-        sym.funcparamtypes[funcsym][(numparams - 1) % 100] |= STYPE_DYNARRAY;
+        sym.funcparamtypes[funcsym][(numparams - 1)] |= STYPE_DYNARRAY;
         if (createdLocalVar) 
         {
           sym.flags[cursym] |= SFLG_DYNAMICARRAY | SFLG_ARRAY;
@@ -2657,7 +2657,7 @@ int parse_sub_expr(long*symlist,int listlen,ccCompiledScript*scrip) {
     usingListLen--;
     // check that the user provided the right number of args
     // if it's a variable arg function, check that there are enough
-    if ((sym.sscope[funcsym] >= 100) && (numargs >= sym.sscope[funcsym] - 100)) ;
+	if ((sym.flags[funcsym] & SFLG_VARARGS) && (numargs >= sym.sscope[funcsym])) ;
     else if (sym.sscope[funcsym] == numargs) ;
     else {
       cc_error("wrong number of parameters in call to '%s'",sym.get_name(funcsym));

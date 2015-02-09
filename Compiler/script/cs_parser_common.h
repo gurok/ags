@@ -91,6 +91,7 @@
 #define SFLG_AUTOPTR   0x20000  // automatically convert definition to pointer
 #define SFLG_DYNAMICARRAY 0x40000  // array allocated at runtime
 #define SFLG_BUILTIN   0x80000  // direct instantiation/extension not allowed
+#define SFLG_VARARGS   0x160000  // function takes a variable number of arguments
 #define PARAM_NO_DEFAULT_VALUE -32000
 #define TEMP_SYMLIST_LENGTH 100
 
