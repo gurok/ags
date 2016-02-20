@@ -658,6 +658,11 @@ namespace AGS.Editor.Components
             return treeItem;
         }
 
+        protected override ProjectTreeItem UpdateTreeItemForItem(AudioClip item, string id)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override void AddNewItemCommandsToFolderContextMenu(string controlID, IList<MenuCommand> menu)
         {
             menu.Add(new MenuCommand(COMMAND_ADD_AUDIO, "Add audio file(s)...", null));

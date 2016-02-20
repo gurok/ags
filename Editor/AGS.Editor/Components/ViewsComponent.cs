@@ -290,6 +290,11 @@ namespace AGS.Editor.Components
             return treeItem;
         }
 
+        protected override ProjectTreeItem UpdateTreeItemForItem(View item, string id)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override void AddNewItemCommandsToFolderContextMenu(string controlID, IList<MenuCommand> menu)
         {
             menu.Add(new MenuCommand(COMMAND_NEW_VIEW, "New View", null));

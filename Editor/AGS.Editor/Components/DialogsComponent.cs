@@ -279,6 +279,11 @@ namespace AGS.Editor.Components
             return treeItem;
         }
         
+        protected override ProjectTreeItem UpdateTreeItemForItem(Dialog item, string id)
+        {
+            throw new NotImplementedException();
+        }
+
         private Dictionary<string, object> ConstructPropertyObjectList(Dialog item)
         {
             Dictionary<string, object> list = new Dictionary<string, object>();

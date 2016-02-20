@@ -187,6 +187,11 @@ namespace AGS.Editor.Components
             return treeItem;
         }
 
+        protected override ProjectTreeItem UpdateTreeItemForItem(InventoryItem item, string id)
+        {
+            throw new NotImplementedException();
+        }
+
         private string GetNodeID(InventoryItem item)
         {
             return ITEM_COMMAND_PREFIX + item.ID; 

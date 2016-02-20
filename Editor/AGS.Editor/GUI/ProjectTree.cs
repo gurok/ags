@@ -70,6 +70,11 @@ namespace AGS.Editor
             return AddTreeLeaf(plugin, id, name, iconKey, false);
         }
 
+        public IProjectTreeItem ReplaceTreeLeaf(IEditorComponent plugin, int index, string id, string name, string iconKey)
+        {
+            return ReplaceTreeLeaf(plugin, index, id, name, iconKey, false);
+        }
+
         private void RegisterTreeNode(string id, IEditorComponent plugin)
         {
             if (_treeNodes.ContainsKey(id))
@@ -103,6 +108,63 @@ namespace AGS.Editor
             return newItem;
         }
 
+        public ProjectTreeItem ReplaceTreeBranch(IEditorComponent component, string oldID, string newID, string name, string iconKey)
+        {
+            ProjectTreeItem newItem = null;
+            int index;
+            TreeNode branch;
+            bool expanded;
+
+            RegisterTreeNode(newID, component);
+
+            TreeNode[] results = _projectTree.Nodes.Find(oldID, true);
+            if (results.Length > 0)
+            {
+                iconKey = SetDefaultIconIfNoneProvided(iconKey);
+                branch = results[0];
+                try
+                {
+                    _projectTree.BeginUpdate();
+
+                    index = branch.Nodes.Count;
+                    while (index-- > 0)
+                    {
+                        if (branch.Nodes[index].IsSelected)
+                        {
+                            break;
+                        }
+                    }
+                    _lastAddedNode = branch.Parent.Nodes.Insert(results[0].Index + 1, newID, name, iconKey, iconKey);
+                    results = new TreeNode[branch.Nodes.Count];
+                    expanded = branch.IsExpanded;
+                    branch.Nodes.CopyTo(results, 0);
+                    branch.Nodes.Clear();
+                    _lastAddedNode.Nodes.AddRange(results);
+                    branch.Remove();
+                    if (expanded)
+                    {
+                        _lastAddedNode.Expand();
+                        if (index > -1)
+                        {
+                            _projectTree.SelectedNode = _lastAddedNode.Nodes[index];
+                        }
+                    }
+                }
+                finally
+                {
+                    _projectTree.EndUpdate();
+                }
+                newItem = new ProjectTreeItem(newID, _lastAddedNode);
+                _lastAddedNode.Tag = newItem;
+            }
+            else
+            {
+                newItem = AddTreeBranch(component, newID, name, iconKey);
+            }
+
+            return newItem;
+        }
+
         public IProjectTreeItem AddTreeLeaf(IEditorComponent component, string id, string name, string iconKey, bool greyedOut)
         {
             RegisterTreeNode(id, component);
@@ -123,6 +185,36 @@ namespace AGS.Editor
             }
             ProjectTreeItem newItem = new ProjectTreeItem(id, newNode);
             newNode.Tag = newItem;
+            return newItem;
+        }
+
+        public IProjectTreeItem ReplaceTreeLeaf(IEditorComponent component, int index, string id, string name, string iconKey, bool greyedOut)
+        {
+            RegisterTreeNode(id, component);
+
+            ProjectTreeItem newItem;
+            TreeNode oldNode;
+            TreeNode newNode;
+            iconKey = SetDefaultIconIfNoneProvided(iconKey);
+            if (_lastAddedNode != null && index < _lastAddedNode.Nodes.Count)
+            {
+                oldNode = _lastAddedNode.Nodes[index];
+                _projectTree.BeginUpdate();
+                newNode = _lastAddedNode.Nodes.Insert(index + 1, id, name, iconKey, iconKey);
+                _lastAddedNode.Nodes.RemoveAt(index);
+                _projectTree.EndUpdate();
+                if (greyedOut)
+                {
+                    newNode.ForeColor = Color.Gray;
+                }
+                newItem = new ProjectTreeItem(id, newNode);
+                newNode.Tag = newItem;
+            }
+            else
+            {
+                newItem = (ProjectTreeItem) AddTreeLeaf(component, id, name, iconKey, greyedOut);
+            }
+
             return newItem;
         }
 

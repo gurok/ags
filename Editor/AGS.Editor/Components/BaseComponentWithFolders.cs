@@ -15,6 +15,7 @@ namespace AGS.Editor.Components
     {
         protected abstract FolderType GetRootFolder();
         protected abstract ProjectTreeItem CreateTreeItemForItem(ItemType item);
+        protected abstract ProjectTreeItem UpdateTreeItemForItem(ItemType item, string id);
         protected abstract void AddNewItemCommandsToFolderContextMenu(string controlID, IList<MenuCommand> menu);
         protected abstract void AddExtraCommandsToFolderContextMenu(string controlID, IList<MenuCommand> menu);
         protected abstract void ItemCommandClick(string controlID);
@@ -230,15 +231,29 @@ namespace AGS.Editor.Components
             }
         }
 
+        private void DecorateTreeItem(ProjectTreeItem treeItem)
+        {
+            treeItem.AllowDragging = true;
+            treeItem.CanDropHere = new ProjectTreeItem.CanDropHereDelegate(ProjectTreeItem_CanDropHere);
+            treeItem.DropHere = new ProjectTreeItem.DropHereDelegate(ProjectTreeItem_DropHere);
+        }
+
         /// <summary>
         /// Adds a tree leaf for the item, and returns the Command ID
         /// </summary>
         protected string AddTreeNodeForItem(ItemType item)
         {
             ProjectTreeItem treeItem = CreateTreeItemForItem(item);
-            treeItem.AllowDragging = true;
-            treeItem.CanDropHere = new ProjectTreeItem.CanDropHereDelegate(ProjectTreeItem_CanDropHere);
-            treeItem.DropHere = new ProjectTreeItem.DropHereDelegate(ProjectTreeItem_DropHere);
+            DecorateTreeItem(treeItem);
+            _items.Add(treeItem.ID, item);
+            return treeItem.ID;
+        }
+
+        protected string ReplaceTreeNodeForItem(ItemType item, string id)
+        {
+            ProjectTreeItem treeItem = UpdateTreeItemForItem(item, id);
+            DecorateTreeItem(treeItem);
+            _items.Remove(id);
             _items.Add(treeItem.ID, item);
             return treeItem.ID;
         }
