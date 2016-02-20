@@ -593,6 +593,11 @@ namespace AGS.Editor.Components
             return newItem;
         }
 
+        protected override ProjectTreeItem UpdateTreeItemForItem(ScriptAndHeader item, string id)
+        {
+            throw new NotImplementedException();
+        }
+
         private string GetNodeID(Script script)
         {
             return ITEM_COMMAND_PREFIX + script.FileName;

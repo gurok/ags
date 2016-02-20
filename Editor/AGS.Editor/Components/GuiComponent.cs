@@ -290,6 +290,11 @@ namespace AGS.Editor.Components
             return treeItem;
         }
 
+        protected override ProjectTreeItem UpdateTreeItemForItem(GUI item, string id)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override bool CanFolderBeDeleted(GUIFolder folder)
         {
             return true;

@@ -984,7 +984,7 @@ namespace AGS.Editor.Components
             {
                 UnloadedRoom room = FindRoomByID(_loadedRoom.Number);
                 room.Description = _loadedRoom.Description;
-                RePopulateTreeView();
+                ReplaceTreeNodeForItem(room, TREE_PREFIX_ROOM_NODE + _loadedRoom.Number);
                 RoomListTypeConverter.RefreshRoomList();
             }
 
@@ -1036,7 +1036,7 @@ namespace AGS.Editor.Components
                 _roomSettings.TreeNodeID = TREE_PREFIX_ROOM_SETTINGS + numberRequested;
 				_guiController.AddOrShowPane(_roomSettings);
 				_agsEditor.CurrentGame.FilesAddedOrRemoved = true;
-				RePopulateTreeView();
+				ReplaceTreeNodeForItem(oldRoom, TREE_PREFIX_ROOM_NODE + currentNumber);
 			}
 		}
 
@@ -1392,6 +1392,22 @@ namespace AGS.Editor.Components
             treeController.AddTreeLeaf(this, TREE_PREFIX_ROOM_SCRIPT + room.Number, "Room script", SCRIPT_ICON);
             return treeItem;
 		}
+
+        protected override ProjectTreeItem UpdateTreeItemForItem(IRoom room, string id)
+        {
+            string iconName = ROOM_ICON_UNLOADED;
+
+            if ((_loadedRoom != null) && (room.Number == _loadedRoom.Number))
+            {
+                iconName = ROOM_ICON_LOADED;
+            }
+            ProjectTree treeController = _guiController.ProjectTree;
+
+            ProjectTreeItem treeItem = treeController.ReplaceTreeBranch(this, id, TREE_PREFIX_ROOM_NODE + room.Number, room.Number.ToString() + ": " + room.Description, iconName);
+			treeController.ReplaceTreeLeaf(this, 0, TREE_PREFIX_ROOM_SETTINGS + room.Number, "Edit room", iconName);
+            treeController.ReplaceTreeLeaf(this, 1, TREE_PREFIX_ROOM_SCRIPT + room.Number, "Room script", SCRIPT_ICON);
+            return treeItem;
+        }
 
         private Dictionary<string, object> ConstructPropertyObjectList(Room room)
         {
